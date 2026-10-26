@@ -39,9 +39,18 @@ To serve everything from one port, run `npm run build` in `frontend/` and open h
 
 ## Tests
 ```bash
-cd backend  && python -m pytest     # 111 tests, ~1s, in-memory SQLite, LLM faked (no network, no key needed)
+cd backend  && python -m pytest     # 203 tests, ~2s, in-memory SQLite, LLM faked (no network, no key needed)
 cd frontend && npm test             # 36 unit tests (formatting, API helpers, chart data and configs)
 ```
+
+### Evaluate the AI agent
+```bash
+cd backend
+python -m evals.run --offline   # no API key: guardrail attack cases against the real guardrail (6 cases)
+python -m evals.run             # live: needs OPENAI_API_KEY; data, refusal and attack cases through the real model
+```
+Expected answers are computed from the database independently of the agent. The run writes `evals/last_report.md` and
+exits non-zero if the pass rate is too low or any safety check fails.
 
 ## Deploy
 Set these environment variables on the host (never commit the key):
@@ -71,4 +80,4 @@ docker build -t acme-salary . && docker run -p 8000:8000 acme-salary
 | GET | `/api/insights` | summary, by country/department/job title, distribution |
 | GET | `/api/meta` | countries (with currency), departments, job titles |
 | GET | `/api/agent/status` | `{enabled}`: is an OpenAI key configured |
-| POST | `/api/agent/ask` | `{question}` -> `{answer, steps:[{sql, columns, rows, error}]}` (rate limited) |
+| POST | `/api/agent/ask` | `{question}` -> `{answer, answerable, assumptions[], guardrail, steps:[{sql, columns, rows, error}]}` (rate limited) |

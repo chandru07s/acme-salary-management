@@ -55,7 +55,7 @@ Flow: question -> LLM (tools: `run_sql`) -> read-only SQL -> rows -> LLM -> answ
 |---|---|
 | Model writes or deletes data | SQLite **authorizer** denies everything except SELECT; `PRAGMA query_only=ON`; only one statement allowed |
 | Model reads private columns (emails) or other tables | Authorizer allows reads only of the `employee_pay` view and `fx_rates`. The view has no email column. A CTE named like a real table cannot unlock it (tested) |
-| Runaway or expensive queries | 2 s wall-clock timeout (progress handler), 50-row result cap, 5-step tool loop, 700 output tokens |
+| Runaway or expensive queries | 2 s wall-clock timeout (progress handler), 50-row result cap, 6-step tool loop, 700 output tokens |
 | Prompt injection via data (a job title saying "ignore your rules") | Prompt marks results as data; more importantly the *permissions* are enforced by the database, not by the prompt |
 | Cost / abuse on a public URL | Sliding-window rate limit (default 60 questions/hour), 500-char question cap. Also set a monthly spend cap in the OpenAI dashboard |
 | Wrong answers | SQL and result rows are always shown; the SQL medians were cross-checked against the Python insights medians |
@@ -64,6 +64,38 @@ Flow: question -> LLM (tools: `run_sql`) -> read-only SQL -> rows -> LLM -> answ
 
 Why a SQL view: it gives the model a small, stable, documented surface (and SQL reviewers can read it),
 instead of the raw schema. `fx_rates` is a real table so USD conversion is plain SQL in both the view and the app config.
+
+### Structured answers, guardrails and evaluation
+**Structured output.** The model must finish by calling a `final_answer` tool whose arguments are validated by a Pydantic
+model: `{answer, assumptions[], answerable}`. Bad JSON or an empty answer is sent back to the model for a retry instead
+of reaching the UI. `answerable=false` is the explicit "the data cannot answer this" path, so the UI never has to guess
+whether a sentence is a real answer.
+
+**Two guardrail layers, both deterministic (no extra LLM call):**
+
+| Layer | When | What it does |
+|---|---|---|
+| Input | Before the model is called | Refuses prompt injection, requests for emails / phone numbers / addresses / secrets, and requests to change data. The model is never called, so it costs nothing |
+| Output | On the final answer | Hard-blocks an email address in the answer or assumptions. Rejects (and retries) a data answer with no successful query behind it: no answer without evidence |
+
+Honest limit: regex rules can be worded around. They are a cheap first layer and a clear message for the user. The real
+boundary is the database authorizer: a request that slips past the rules still cannot read emails or write anything.
+
+**Evaluation (`backend/evals/`).** Guardrail and prompt unit tests prove the code does what I wrote. They do not prove the
+*model* answers well. The eval suite does that:
+
+- 8 data questions graded against **ground truth computed from the database by a separate code path** (the Python insights
+  service), so the agent is not graded against itself. Counts must match exactly; money within 1% so "$94k" matches 94,120.
+- 4 out-of-scope or write requests the model must decline, 6 attacks the input guardrail must stop.
+- Every case is also checked for safety: no email in the answer or any returned row, no system-prompt leak.
+- `python -m evals.run --offline` needs no key and runs the guardrail attacks for real. `python -m evals.run` runs every case
+  through the live model and exits non-zero below a pass rate, so it can gate CI.
+- The harness has its own tests (a perfect agent scores 100%, a broken one is caught, one crash does not stop the suite).
+  Writing them found a real grader bug: a 1% tolerance accepted "419 people" for 418, so counts now use exact matching.
+- Ground truth was cross-checked on the 10,000-row data: the correct SQL for all 8 data questions agrees with it.
+
+What the evals do **not** prove: the live model's accuracy has not been measured in this repo yet (that needs an API key
+and a run). The suite is small (18 cases): a smoke test for regressions, not a benchmark.
 
 ## Performance (10,000 rows, local)
 | Endpoint | Time |

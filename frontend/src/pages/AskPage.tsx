@@ -105,7 +105,7 @@ export function AskPage() {
             {t.error && <div className="alert alert-danger mb-0" role="alert">{t.error}</div>}
             {t.result && (
               <>
-                <div className="answer-text">{t.result.answer}</div>
+                <AnswerView result={t.result} />
                 {t.result.steps.length > 0 && (
                   <details>
                     <summary className="text-secondary">
@@ -122,6 +122,40 @@ export function AskPage() {
         </section>
       ))}
     </div>
+  );
+}
+
+function AnswerView({ result }: { result: AgentAnswer }) {
+  if (result.guardrail) {
+    return (
+      <div className="alert alert-warning mb-0" role="status">
+        <div className="fw-medium mb-1">
+          {result.guardrail === "input" ? "I can't help with that request" : "The answer was withheld"}
+        </div>
+        <div className="answer-text">{result.answer}</div>
+      </div>
+    );
+  }
+  if (!result.answerable) {
+    return (
+      <div className="alert alert-secondary mb-0" role="status">
+        <div className="fw-medium mb-1">This can't be answered from the pay data</div>
+        <div className="answer-text">{result.answer}</div>
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="answer-text">{result.answer}</div>
+      {result.assumptions.length > 0 && (
+        <div className="small text-secondary">
+          Assumptions:
+          <ul className="mb-0 ps-3">
+            {result.assumptions.map((a) => <li key={a}>{a}</li>)}
+          </ul>
+        </div>
+      )}
+    </>
   );
 }
 

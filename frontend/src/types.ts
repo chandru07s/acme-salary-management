@@ -114,5 +114,10 @@ export interface AgentStep {
 
 export interface AgentAnswer {
   answer: string;
+  /** False when the data cannot answer the question or the request is out of scope. */
+  answerable: boolean;
+  assumptions: string[];
+  /** Set when a guardrail produced this answer instead of the model. */
+  guardrail: "input" | "output" | null;
   steps: AgentStep[];
 }

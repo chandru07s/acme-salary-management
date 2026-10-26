@@ -46,3 +46,4 @@ Replace the spreadsheets with a web app where the HR Manager can (1) maintain em
 - Insights endpoints respond in < 500 ms on 10k rows.
 - Core business logic covered by fast, deterministic unit tests (the LLM is faked in tests, so no network or cost).
 - The AI cannot write, cannot read outside `employee_pay`, and cannot run for more than 2 seconds per query.
+- AI answers are structured and evidence-backed (no data answer without a successful query), and a small evaluation suite checks them against ground truth computed from the database.

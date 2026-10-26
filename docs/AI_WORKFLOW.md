@@ -29,6 +29,16 @@ Tool used: Claude (agentic, with shell + file tools).
 - **What the AI did:** applied a data-visualisation checklist (choose the form by the data's job, validate the colour palette with a script, thin marks, labels outside bars, table equivalent) and replaced my custom range strips with standard bar / stacked-bar / column charts.
 - **Verified rather than trusted:** colour palette run through a validator (my first teal choice failed); chart configs unit-tested; charts rendered to images with the real 10k dataset and inspected, which caught edge padding and spare space.
 
+## v4: structured answers, guardrails and an evaluation suite
+- **Prompt:** "Make the project more worth using my stack and agentic-AI skills." I rejected two of the four options the AI
+  proposed (rebuilding on a framework SDK, adding an MCP server): they add resume keywords, not value for this brief.
+- **Built:** a Pydantic-validated `final_answer` tool, input and output guardrails, and an eval suite whose expected
+  answers come from the database rather than from the agent.
+- **Verified rather than trusted:** the harness has its own tests; they exposed a grader that accepted an off-by-one
+  headcount (fixed with per-case tolerance). Ground truth was checked against real SQL results on the 10k dataset.
+- **Not verified:** the live model's accuracy. No API key was available to the AI, so only the offline guardrail run and the
+  fake-model tests were executed. Run `python -m evals.run` with a key and record the result before the interview.
+
 ## Candidate notes (fill in before submitting; only write what is true)
 - What I decided myself:
 - What I changed or rejected from the AI's suggestions:
