@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -45,3 +45,12 @@ class SalaryHistory(Base):
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     employee: Mapped[Employee] = relationship(back_populates="history")
+
+
+class FxRate(Base):
+    """Reference rates (local currency -> USD). Seeded from app.config on startup."""
+
+    __tablename__ = "fx_rates"
+
+    currency: Mapped[str] = mapped_column(String(3), primary_key=True)
+    to_usd: Mapped[float] = mapped_column(Float)

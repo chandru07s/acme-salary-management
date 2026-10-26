@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.config import COUNTRY_CURRENCY, FX_TO_USD
 from app.currency import currency_for_country
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, engine
+from app.db_setup import init_db
 from app.models import Employee, SalaryHistory
 
 # Fixed "today" for the data set so output does not drift with the wall clock.
@@ -164,7 +165,7 @@ def main() -> None:
     parser.add_argument("--reset", action="store_true", help="delete existing employees first")
     args = parser.parse_args()
 
-    Base.metadata.create_all(engine)
+    init_db(engine)
     with SessionLocal() as db:
         n = seed(db, args.count, args.seed, args.reset)
     print(f"Seeded {n} employees across {len(COUNTRY_CURRENCY)} countries.")

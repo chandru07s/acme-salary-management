@@ -7,7 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
+from app.database import get_db
+from app.db_setup import init_db
 from app.main import create_app
 from app.schemas import EmployeeCreate
 from app.services import employees as svc
@@ -18,7 +19,7 @@ def db():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    Base.metadata.create_all(engine)
+    init_db(engine)
     session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)()
     yield session
     session.close()

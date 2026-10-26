@@ -8,9 +8,10 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
-from app.database import Base, SessionLocal, engine
+from app.database import SessionLocal, engine
+from app.db_setup import init_db
 from app.models import Employee
-from app.routes import employees, insights
+from app.routes import agent, employees, insights
 from app.services.employees import DuplicateEmailError, NotFoundError
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -18,7 +19,7 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(engine)
+    init_db(engine)
     # Convenience for ephemeral deploys: seed an empty DB on boot when AUTO_SEED=1.
     if os.getenv("AUTO_SEED") == "1":
         with SessionLocal() as db:
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
 
     app.include_router(employees.router)
     app.include_router(insights.router)
+    app.include_router(agent.router)
 
     # Single-service deploy: serve the built React app from the same origin.
     if FRONTEND_DIST.is_dir():
