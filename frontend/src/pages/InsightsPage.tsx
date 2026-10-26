@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { colorForKey, formatPct, payrollShares, topByMedian } from "../chartData";
+import { PageHeader } from "../components/PageHeader";
 import { BandColumns, MedianBars, PayrollShareBar } from "../components/Charts";
 import { formatUsdCompact } from "../format";
-import type { GroupStats, Insights } from "../types";
+import type { Band, GroupStats, Insights } from "../types";
 
 type Group = "country" | "department" | "job_title";
 
@@ -32,8 +33,9 @@ export function InsightsPage() {
   if (error) return <div className="alert alert-danger" role="alert">{error}</div>;
   if (!data) {
     return (
-      <div className="progress" role="progressbar" aria-label="Loading insights">
-        <div className="progress-bar progress-bar-striped progress-bar-animated w-100" />
+      <div role="status" aria-label="Loading insights">
+        <div className="skel mb-3" style={{ height: 220, borderRadius: 18 }} />
+        <div className="skel" style={{ height: 320, borderRadius: 14 }} />
       </div>
     );
   }
@@ -52,41 +54,55 @@ export function InsightsPage() {
   const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
   const allKeys = rows.map((r) => r.key);
 
-  return (
-    <div className="d-grid gap-4">
-      <div>
-        <h1 className="page-title">How ACME pays</h1>
-        <div className="text-secondary">Active employees only. Local salaries are converted to USD at fixed reference rates.</div>
-      </div>
+  const top = [...rows].sort((x, y) => y.median - x.median)[0];
+  const medianBand = data.distribution.findIndex((b) => s.median >= b.min && (b.max === null || s.median < b.max));
+  const maxCount = Math.max(1, ...data.distribution.map((b) => b.count));
 
-      <div className="card">
-        <div className="card-body">
-          <div className="row g-4">
-            <Figure label="Employees" value={s.headcount.toLocaleString()} />
-            <Figure label="Annual payroll" value={formatUsdCompact(s.total)} />
-            <Figure label="Median salary" value={formatUsdCompact(s.median)} />
-            <Figure label="Average salary" value={formatUsdCompact(s.avg)} />
-          </div>
-          {s.headcount > 0 && (
-            <p className="text-secondary mt-3 mb-0">
-              {Math.abs(skew) < 0.05
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Insights"
+        title="How ACME pays"
+        subtitle="Active employees only. Local salaries are converted to USD at fixed reference rates."
+      />
+
+      <section className="hero" aria-label="Typical salary">
+        <div>
+          <div className="hero-label">Median annual salary</div>
+          <div className="hero-value">{formatUsdCompact(s.median)}</div>
+          <div className="hero-note">
+            {s.headcount === 0
+              ? "No active employees yet."
+              : Math.abs(skew) < 0.05
                 ? "The average and median are close, so pay is fairly evenly spread."
                 : skew > 0
                   ? `The average is ${Math.round(skew * 100)}% above the median: a smaller group of high salaries pulls it up. Use the median for what a typical person earns.`
                   : `The average is ${Math.round(-skew * 100)}% below the median.`}
-            </p>
-          )}
+          </div>
         </div>
+        <div aria-hidden>
+          <div className="hero-bars">
+            {data.distribution.map((b: Band, i: number) => (
+              <div key={b.label} className={`col${i === medianBand ? " hot" : ""}`}
+                style={{ height: `${Math.max(4, (b.count / maxCount) * 100)}%`, animationDelay: `${i * 60}ms` }} />
+            ))}
+          </div>
+          <div className="hero-axis"><span>Lower pay</span><span>People per salary band</span><span>Higher pay</span></div>
+        </div>
+      </section>
+
+      <div className="kpis">
+        <Figure label="Employees" value={s.headcount.toLocaleString()} sub="active today" />
+        <Figure label="Annual payroll" value={formatUsdCompact(s.total)} sub="all salaries, in USD" />
+        <Figure label="Average salary" value={formatUsdCompact(s.avg)} sub={`median ${formatUsdCompact(s.median)}`} />
+        <Figure label={`Highest median ${noun}`} value={top ? labelFor(top.key) : "–"} sub={top ? `${formatUsdCompact(top.median)} median` : ""} small />
       </div>
 
-      {/* One filter row above everything it scopes */}
-      <div className="d-flex flex-wrap align-items-center gap-3">
-        <span className="fw-medium" id="group-label">Group by</span>
-        <div className="btn-group" role="group" aria-labelledby="group-label">
+      <div className="toolbar">
+        <span className="field-label mb-0" id="group-label">Group by</span>
+        <div className="segmented" role="group" aria-labelledby="group-label">
           {GROUPS.map((g) => (
-            <button key={g.value} type="button" aria-pressed={group === g.value}
-              className={`btn btn-sm ${group === g.value ? "btn-primary" : "btn-outline-primary"}`}
-              onClick={() => setGroup(g.value)}>
+            <button key={g.value} type="button" aria-pressed={group === g.value} onClick={() => setGroup(g.value)}>
               {g.label}
             </button>
           ))}
@@ -95,13 +111,13 @@ export function InsightsPage() {
       </div>
 
       {rows.length === 0 ? (
-        <div className="card"><div className="card-body text-secondary">
-          No active employees yet. Add people in the Directory to see pay insights.
-        </div></div>
+        <div className="panel empty">
+          <h2>No active employees yet</h2>Add people in the Directory to see pay insights.
+        </div>
       ) : (
-        <>
-          <section className="card" aria-labelledby="h-median">
-            <div className="card-body">
+        <div className="d-grid gap-3">
+          <section className="panel" aria-labelledby="h-median">
+            <div>
               <h2 className="chart-title" id="h-median">Median salary by {noun}</h2>
               <p className="chart-sub">Annual salary in USD. Hover a bar for headcount, average and range.</p>
               <MedianBars rows={shown} labelFor={labelFor} />
@@ -110,8 +126,8 @@ export function InsightsPage() {
           </section>
 
           {showShare && shares.length > 0 && (
-            <section className="card" aria-labelledby="h-share">
-              <div className="card-body">
+            <section className="panel" aria-labelledby="h-share">
+              <div>
                 <h2 className="chart-title" id="h-share">Share of annual payroll by {noun}</h2>
                 <p className="chart-sub">Where the payroll budget goes. Hover a segment for the amount.</p>
                 <PayrollShareBar shares={shares} labelFor={labelFor} />
@@ -119,20 +135,20 @@ export function InsightsPage() {
             </section>
           )}
 
-          <section className="card" aria-labelledby="h-bands">
-            <div className="card-body">
+          <section className="panel" aria-labelledby="h-bands">
+            <div>
               <h2 className="chart-title" id="h-bands">How many people earn in each band</h2>
               <p className="chart-sub">Employees per annual salary band, in USD.</p>
               <BandColumns bands={data.distribution} headcount={s.headcount} />
             </div>
           </section>
 
-          <section className="card" aria-labelledby="h-table">
-            <div className="card-body">
+          <section className="panel" aria-labelledby="h-table">
+            <div>
               <h2 className="chart-title" id="h-table">Details by {noun}</h2>
               <p className="chart-sub">The exact numbers behind the charts, in USD.</p>
               <div className="table-responsive">
-                <table className="table table-sm align-middle mb-0">
+                <table className="table mini-table align-middle mb-0">
                   <thead>
                     <tr>
                       <th scope="col">{GROUPS.find((g) => g.value === group)!.label}</th>
@@ -169,17 +185,18 @@ export function InsightsPage() {
               </div>
             </div>
           </section>
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+function Figure({ label, value, sub, small }: { label: string; value: string; sub?: string; small?: boolean }) {
   return (
-    <div className="col-6 col-md-3">
-      <div className="small text-secondary">{label}</div>
-      <div className="figure-value">{value}</div>
+    <div className="kpi">
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value" style={small ? { fontSize: "1.35rem", paddingTop: "0.25rem" } : undefined}>{value}</div>
+      {sub && <div className="kpi-sub">{sub}</div>}
     </div>
   );
 }

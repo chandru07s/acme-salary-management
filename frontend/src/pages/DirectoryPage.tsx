@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { EmployeeDialog } from "../components/EmployeeDialog";
+import { IconClose, IconDownload, IconPlus, IconSearch } from "../components/Icons";
+import { PageHeader } from "../components/PageHeader";
 import { formatDate, formatMoney, formatUsdCompact } from "../format";
 import type { Employee, EmployeePage, ListQuery, Meta, SortField } from "../types";
 import { useDebounce } from "../useDebounce";
@@ -110,31 +112,42 @@ export function DirectoryPage({ onDataChanged }: Props) {
   const from = total === 0 ? 0 : page * pageSize + 1;
   const to = Math.min(total, (page + 1) * pageSize);
 
-  return (
-    <div className="d-grid gap-3">
-      <div className="d-flex flex-wrap justify-content-between align-items-end gap-2">
-        <div>
-          <h1 className="page-title">Employees</h1>
-          <div className="text-secondary">
-            {data ? `${total.toLocaleString()} ${total === 1 ? "person" : "people"}` : "Loading…"}
-            {" · salaries shown in local currency, with USD equivalent"}
-          </div>
-        </div>
-        <div className="d-flex gap-2">
-          <a className="btn btn-outline-primary" href={api.exportUrl(filterQuery)} download>
-            Export CSV
-          </a>
-          <button className="btn btn-primary" onClick={() => setEditing("new")}>
-            Add employee
-          </button>
-        </div>
-      </div>
+  const countryName = (code: string) => meta?.countries.find((c) => c.code === code)?.name ?? code;
+  const chips: { label: string; clear: () => void }[] = [];
+  if (country) chips.push({ label: countryName(country), clear: () => setCountry("") });
+  if (department) chips.push({ label: department, clear: () => setDepartment("") });
+  if (jobTitle) chips.push({ label: jobTitle, clear: () => setJobTitle("") });
 
-      <div className="card">
-        <div className="card-body row g-2 align-items-end">
-          <div className="col-12 col-lg-3">
-            <label htmlFor="f-search" className="form-label small text-secondary mb-1">Search name or email</label>
-            <input id="f-search" className="form-control" value={search} onChange={(e) => setSearch(e.target.value)} />
+  return (
+    <div>
+      <PageHeader
+        eyebrow="Directory"
+        title="Employees"
+        subtitle={
+          <>
+            {data ? `${total.toLocaleString()} ${total === 1 ? "person" : "people"}` : "Loading…"}
+            {" · salaries in local currency with the USD equivalent"}
+          </>
+        }
+        actions={
+          <>
+            <a className="btn btn-light-line" href={api.exportUrl(filterQuery)} download>
+              <IconDownload /> Export CSV
+            </a>
+            <button className="btn btn-primary" onClick={() => setEditing("new")}>
+              <IconPlus /> Add employee
+            </button>
+          </>
+        }
+      />
+
+      <div className="card mb-3">
+        <div className="filters">
+          <div className="search-wrap">
+            <label htmlFor="f-search" className="field-label">Search</label>
+            <IconSearch />
+            <input id="f-search" className="form-control" placeholder="Name or email" value={search}
+              onChange={(e) => setSearch(e.target.value)} />
           </div>
           <FilterSelect id="f-country" label="Country" value={country} onChange={setCountry}
             options={(meta?.countries ?? []).map((c) => ({ value: c.code, label: c.name }))} />
@@ -142,33 +155,33 @@ export function DirectoryPage({ onDataChanged }: Props) {
             options={(meta?.departments ?? []).map((d) => ({ value: d, label: d }))} />
           <FilterSelect id="f-title" label="Job title" value={jobTitle} onChange={setJobTitle}
             options={(meta?.job_titles ?? []).map((t) => ({ value: t, label: t }))} />
-          <FilterSelect id="f-status" label="Status" value={status} onChange={setStatus}
-            options={[{ value: "active", label: "Active" }, { value: "terminated", label: "Terminated" }]} />
-          {hasFilters && (
-            <div className="col-auto">
-              <button className="btn btn-link px-0" onClick={clearFilters}>Clear filters</button>
-            </div>
-          )}
+        </div>
+        <div className="filter-row">
+          <div className="segmented" role="group" aria-label="Employment status">
+            {[["active", "Active"], ["terminated", "Terminated"], ["", "All"]].map(([v, l]) => (
+              <button key={l} type="button" aria-pressed={status === v} onClick={() => setStatus(v)}>{l}</button>
+            ))}
+          </div>
+          {chips.map((c) => (
+            <span className="chip" key={c.label}>
+              {c.label}
+              <button type="button" aria-label={`Remove filter ${c.label}`} onClick={c.clear}><IconClose /></button>
+            </span>
+          ))}
+          {hasFilters && <button className="btn btn-link btn-sm px-1" onClick={clearFilters}>Clear all</button>}
         </div>
       </div>
 
       {error && (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center mb-0" role="alert">
+        <div className="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
           <span>{error}</span>
           <button type="button" className="btn-close" aria-label="Dismiss" onClick={() => setError(null)} />
         </div>
       )}
 
       <div className="card overflow-hidden">
-        <div style={{ height: 3 }}>
-          {loading && (
-            <div className="progress rounded-0" style={{ height: 3 }} role="progressbar" aria-label="Loading">
-              <div className="progress-bar progress-bar-striped progress-bar-animated w-100" />
-            </div>
-          )}
-        </div>
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
+          <table className="table data-table align-middle">
             <thead>
               <tr>
                 {COLUMNS.map((col) => (
@@ -178,9 +191,9 @@ export function DirectoryPage({ onDataChanged }: Props) {
                     className={col.align === "end" ? "text-end" : undefined}
                     aria-sort={sortBy === col.field ? (order === "asc" ? "ascending" : "descending") : "none"}
                   >
-                    <button className="sortable" onClick={() => toggleSort(col.field)}>
+                    <button className={`sortable${sortBy === col.field ? " on" : ""}`} onClick={() => toggleSort(col.field)}>
                       {col.label}
-                      {sortBy === col.field && <span aria-hidden> {order === "asc" ? "▲" : "▼"}</span>}
+                      {sortBy === col.field && <span aria-hidden> {order === "asc" ? "↑" : "↓"}</span>}
                     </button>
                   </th>
                 ))}
@@ -188,32 +201,45 @@ export function DirectoryPage({ onDataChanged }: Props) {
               </tr>
             </thead>
             <tbody>
+              {!data && loading && Array.from({ length: 8 }, (_, i) => (
+                <tr key={`sk${i}`}>
+                  {Array.from({ length: COLUMNS.length + 1 }, (_, j) => (
+                    <td key={j}><div className="skel" style={{ width: j === 0 ? "70%" : "55%" }} /></td>
+                  ))}
+                </tr>
+              ))}
               {data?.items.map((e) => (
-                <tr key={e.id} className="clickable" onClick={() => setEditing(e)}>
+                <tr key={e.id} className="clickable" onClick={() => setEditing(e)} style={{ opacity: loading ? 0.6 : 1 }}>
                   <td>
-                    <div className="fw-medium">{e.full_name}</div>
-                    <div className="small text-secondary">{e.email}</div>
+                    <div className="person">
+                      <span className="avatar" style={avatarStyle(e.full_name)} aria-hidden>{initials(e.full_name)}</span>
+                      <div className="text-truncate">
+                        <div className="person-name">{e.full_name}</div>
+                        <div className="person-mail">{e.email}</div>
+                      </div>
+                    </div>
                   </td>
-                  <td>{e.country}</td>
+                  <td className="text-nowrap">{countryName(e.country)}</td>
                   <td>{e.department}</td>
                   <td>{e.job_title}</td>
-                  <td>{formatDate(e.hire_date)}</td>
+                  <td className="text-nowrap">{formatDate(e.hire_date)}</td>
                   <td className="text-end">
-                    <div className="fw-medium">{formatMoney(e.salary, e.currency)}</div>
-                    {e.currency !== "USD" && <div className="small text-secondary">≈ {formatUsdCompact(e.salary_usd)}</div>}
+                    <div className="salary">{formatMoney(e.salary, e.currency)}</div>
+                    {e.currency !== "USD" && <div className="cell-sub">≈ {formatUsdCompact(e.salary_usd)}</div>}
                   </td>
                   <td>
-                    <span className={`badge ${e.status === "active" ? "text-bg-success" : "text-bg-secondary"}`}>
-                      {e.status === "active" ? "Active" : "Terminated"}
-                    </span>
+                    <span className={`status ${e.status}`}>{e.status === "active" ? "Active" : "Terminated"}</span>
                   </td>
                 </tr>
               ))}
               {data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={COLUMNS.length + 1} className="text-center py-5">
-                    <div>No employees match these filters.</div>
-                    {hasFilters && <button className="btn btn-link" onClick={clearFilters}>Clear filters</button>}
+                  <td colSpan={COLUMNS.length + 1}>
+                    <div className="empty">
+                      <h2>No employees match</h2>
+                      <div>Try removing a filter or searching for a different name.</div>
+                      {hasFilters && <button className="btn btn-link" onClick={clearFilters}>Clear all filters</button>}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -221,7 +247,7 @@ export function DirectoryPage({ onDataChanged }: Props) {
           </table>
         </div>
 
-        <div className="card-footer bg-white d-flex flex-wrap justify-content-end align-items-center gap-3">
+        <div className="table-foot">
           <label className="d-flex align-items-center gap-2 small text-secondary mb-0">
             Rows per page
             <select className="form-select form-select-sm w-auto" value={pageSize}
@@ -230,11 +256,11 @@ export function DirectoryPage({ onDataChanged }: Props) {
             </select>
           </label>
           <span className="small text-secondary">{from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()}</span>
-          <div className="btn-group btn-group-sm" role="group" aria-label="Pagination">
-            <button className="btn btn-outline-secondary" disabled={page === 0} onClick={() => setPage(0)} aria-label="First page">«</button>
-            <button className="btn btn-outline-secondary" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">‹</button>
-            <button className="btn btn-outline-secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)} aria-label="Next page">›</button>
-            <button className="btn btn-outline-secondary" disabled={page >= lastPage} onClick={() => setPage(lastPage)} aria-label="Last page">»</button>
+          <div className="pager d-flex" role="group" aria-label="Pagination">
+            <button disabled={page === 0} onClick={() => setPage(0)} aria-label="First page">«</button>
+            <button disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">‹</button>
+            <button disabled={page >= lastPage} onClick={() => setPage(page + 1)} aria-label="Next page">›</button>
+            <button disabled={page >= lastPage} onClick={() => setPage(lastPage)} aria-label="Last page">»</button>
           </div>
         </div>
       </div>
@@ -251,6 +277,23 @@ export function DirectoryPage({ onDataChanged }: Props) {
   );
 }
 
+const TINTS = [
+  ["#e8f0fb", "#1b559d"], ["#e3f5ec", "#0f7a4d"], ["#fdeee3", "#a4511a"],
+  ["#efe9fb", "#5b3fb0"], ["#fbe8f0", "#a02c5d"], ["#e5f4f6", "#1d6b78"],
+];
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+function avatarStyle(name: string) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const [bg, fg] = TINTS[h % TINTS.length];
+  return { background: bg, color: fg };
+}
+
 interface FilterSelectProps {
   id: string;
   label: string;
@@ -261,8 +304,8 @@ interface FilterSelectProps {
 
 function FilterSelect({ id, label, value, onChange, options }: FilterSelectProps) {
   return (
-    <div className="col-6 col-lg">
-      <label htmlFor={id} className="form-label small text-secondary mb-1">{label}</label>
+    <div>
+      <label htmlFor={id} className="field-label">{label}</label>
       <select id={id} className="form-select" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">All</option>
         {options.map((o) => (
