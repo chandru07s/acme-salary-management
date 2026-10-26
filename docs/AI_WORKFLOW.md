@@ -18,3 +18,14 @@ Tool used: Claude (agentic, with shell + file tools).
 ## Where AI was *not* trusted blindly
 - Statistical aggregates (median/percentiles) were verified against hand-computed values in tests.
 - Currency conversion logic was covered by explicit tests, including unknown-currency failure.
+
+## v2: Bootstrap UI and the "Ask the data" agent
+- **Prompt:** "Redo the project in my stack (Python, JavaScript, CSS, Bootstrap, SQL) and add an AI feature using what I learned in my agentic-AI course; use my OpenAI key."
+- **Decisions I took with the AI:** keep React (the brief names it) but style with Bootstrap; keep the tested FastAPI backend; give the agent exactly one tool (`run_sql`) over one SQL view; enforce safety in SQLite (authorizer) rather than in the prompt; inject the LLM client so tests are offline.
+- **Verified rather than trusted:** the authorizer rules had two real bugs found by tests (CTE reads were wrongly blocked; a CTE named like a real table could have unlocked it). SQL medians were cross-checked against the Python implementation on the 10k dataset.
+
+## Candidate notes (fill in before submitting; only write what is true)
+- What I decided myself:
+- What I changed or rejected from the AI's suggestions:
+- What I checked by hand and how:
+- What I would do next:

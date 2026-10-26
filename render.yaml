@@ -6,5 +6,11 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: AUTO_SEED   # seeds 10,000 employees on first boot (free tier disk is ephemeral)
+      - key: AUTO_SEED            # seeds 10,000 employees on first boot (free tier disk is ephemeral)
         value: "1"
+      - key: OPENAI_API_KEY       # paste the value in the Render dashboard; never commit it
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: AGENT_MAX_REQUESTS_PER_HOUR
+        value: "60"

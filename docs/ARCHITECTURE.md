@@ -8,6 +8,10 @@ flowchart LR
   S --> M[SQLAlchemy models]
   M --> DB[(SQLite)]
   Seed[seed.py] --> M
+  UI -->|question| A[Agent route]
+  A --> L[LLM tool loop]
+  L -->|run_sql| Q[SQL runner: authorizer + query_only]
+  Q --> V[(employee_pay view)]
 ```
 
 **Layers.** Routes only translate HTTP <-> service calls. Services hold use-cases and raise domain errors
@@ -28,6 +32,23 @@ functions, so the money maths is unit-tested with hand-computed values and no da
 | SQLite | Zero-ops, per the brief | Single writer; swap `DATABASE_URL` for Postgres (SQLAlchemy code is portable) |
 | API serves the built UI | One deployable, no CORS in production | Separate CDN hosting is easy later |
 
+## The "Ask the data" agent
+Flow: question -> LLM (tools: `run_sql`) -> read-only SQL -> rows -> LLM -> answer. The UI shows the answer and the SQL.
+
+| Concern | Control |
+|---|---|
+| Model writes or deletes data | SQLite **authorizer** denies everything except SELECT; `PRAGMA query_only=ON`; only one statement allowed |
+| Model reads private columns (emails) or other tables | Authorizer allows reads only of the `employee_pay` view and `fx_rates`. The view has no email column. A CTE named like a real table cannot unlock it (tested) |
+| Runaway or expensive queries | 2 s wall-clock timeout (progress handler), 50-row result cap, 5-step tool loop, 700 output tokens |
+| Prompt injection via data (a job title saying "ignore your rules") | Prompt marks results as data; more importantly the *permissions* are enforced by the database, not by the prompt |
+| Cost / abuse on a public URL | Sliding-window rate limit (default 60 questions/hour), 500-char question cap. Also set a monthly spend cap in the OpenAI dashboard |
+| Wrong answers | SQL and result rows are always shown; the SQL medians were cross-checked against the Python insights medians |
+| Tests need the network | LLM client is injected; tests use a scripted fake, so they are fast, free and deterministic |
+| Data leaves the building | Query results (names, titles, salaries) go to OpenAI. Fine for a demo; production needs a DPA or a self-hosted model |
+
+Why a SQL view: it gives the model a small, stable, documented surface (and SQL reviewers can read it),
+instead of the raw schema. `fx_rates` is a real table so USD conversion is plain SQL in both the view and the app config.
+
 ## Performance (10,000 rows, local)
 | Endpoint | Time |
 |---|---|
@@ -35,6 +56,7 @@ functions, so the money maths is unit-tested with hand-computed values and no da
 | Insights overview | ~90 ms |
 | CSV export (all rows) | ~175 ms (was ~4.1 s when yielding row by row; chunking fixed it) |
 | Seed 10,000 employees | ~1 s (bulk insert) |
+| Agent SQL (median by country via window functions) | ~25 ms (LLM latency dominates, typically a few seconds) |
 
 ## Security (deliberately out of v1, see requirements)
 Salary data is sensitive. Before real use: SSO + role-based access, audit log of reads/writes, HTTPS-only,
