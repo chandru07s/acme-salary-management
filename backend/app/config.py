@@ -46,5 +46,8 @@ FX_TO_USD: dict[str, float] = {
     "JPY": 0.0067,
 }
 
+# Pristine defaults; FX_TO_USD above is what the app uses and can be edited at runtime (Settings page).
+DEFAULT_FX_TO_USD: dict[str, float] = dict(FX_TO_USD)
+
 # Upper bounds (USD, exclusive) for the salary distribution histogram.
 SALARY_BAND_EDGES_USD: list[int] = [30_000, 50_000, 75_000, 100_000, 150_000, 200_000]

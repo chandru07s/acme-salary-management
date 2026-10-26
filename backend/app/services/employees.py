@@ -20,7 +20,11 @@ class DuplicateEmailError(Exception):
 
 
 # Salary converted to USD *in SQL* so sorting across currencies is meaningful.
-SALARY_USD = Employee.salary * case(FX_TO_USD, value=Employee.currency, else_=0)
+
+
+def _salary_usd_expr():
+    """Built per query, not at import: FX rates can be edited at runtime on the Settings page."""
+    return Employee.salary * case(dict(FX_TO_USD), value=Employee.currency, else_=0)
 
 SORTABLE = {
     "id": Employee.id,
@@ -29,7 +33,6 @@ SORTABLE = {
     "department": Employee.department,
     "job_title": Employee.job_title,
     "hire_date": Employee.hire_date,
-    "salary_usd": SALARY_USD,
 }
 
 MAX_PAGE_SIZE = 100
@@ -62,7 +65,7 @@ def _apply_filters(stmt: Select, f: EmployeeFilters) -> Select:
 
 
 def _ordered(stmt: Select, sort_by: str, order: str) -> Select:
-    col = SORTABLE.get(sort_by, Employee.id)
+    col = _salary_usd_expr() if sort_by == "salary_usd" else SORTABLE.get(sort_by, Employee.id)
     primary = col.desc() if order == "desc" else col.asc()
     # Employee.id as a tiebreaker keeps pagination stable.
     return stmt.order_by(primary, Employee.id.asc())

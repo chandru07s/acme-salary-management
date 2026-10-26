@@ -11,6 +11,7 @@ Web software for an HR Manager to manage salaries for 10,000 employees across 8 
 - **Directory:** server-side search, filters (country, department, job title, status), sortable columns,
   pagination, add / edit / terminate / reactivate, CSV export of the filtered list.
 - **Salary history:** every salary change is recorded with a reason.
+- **Dashboard, Pay equity, Employee profile, Settings:** a home page with an attention panel; compa-ratio (salary / median of the same job title in the same country; below 0.85 is flagged, groups under 3 people are not benchmarked); a profile page with salary history; editable FX rates that re-price every USD figure (including sorting and the AI analyst's view).
 - **Insights:** headcount, payroll, median and average; median pay by country / department / job title (bar chart),
   share of payroll (stacked bar), salary bands (columns) and a details table with min / median / average / max.
 - **Ask the data (AI):** ask questions in plain English; an AI analyst writes read-only SQL over a privacy-trimmed
@@ -78,6 +79,10 @@ docker build -t acme-salary . && docker run -p 8000:8000 acme-salary
 | POST / PATCH / DELETE | `/api/employees[/{id}]` | create / partial update / soft delete |
 | GET | `/api/employees/{id}/history` | salary history, newest first |
 | GET | `/api/insights` | summary, by country/department/job title, distribution |
+| GET | `/api/dashboard` | home page: headline numbers, latest hires, recent raises, pay-equity alert |
+| GET | `/api/equity` | pay equity: `band (below/within/above), country, department, page` (compa-ratio vs same title and country) |
+| GET | `/api/employees/{id}/position` | one person's compa-ratio, peer median, peers, tenure |
+| GET / PUT / POST | `/api/settings/fx`, `/api/settings/fx/{currency}`, `/api/settings/fx/reset` | view, edit and reset USD exchange rates |
 | GET | `/api/meta` | countries (with currency), departments, job titles |
 | GET | `/api/agent/status` | `{enabled}`: is an OpenAI key configured |
 | POST | `/api/agent/ask` | `{question}` -> `{answer, answerable, assumptions[], guardrail, steps:[{sql, columns, rows, error}]}` (rate limited) |

@@ -19,6 +19,10 @@ export const IconArrow = () => <Svg><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
 export const IconClose = () => <Svg><path d="M6 6l12 12M18 6 6 18" /></Svg>;
 export const IconShield = () => <Svg><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" /><path d="M9 12l2 2 4-4" /></Svg>;
 
+export const IconHome = () => <Svg><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4v-5H9v5H5a1 1 0 0 1-1-1z" /></Svg>;
+export const IconScale = () => <Svg><path d="M12 4v16M6 20h12M5 8h14" /><path d="M5 8 2.5 14a3 3 0 0 0 5 0zM19 8l-2.5 6a3 3 0 0 0 5 0z" /></Svg>;
+export const IconGear = () => <Svg><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4.4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" /></Svg>;
+
 export function Logo() {
   return (
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden focusable="false">

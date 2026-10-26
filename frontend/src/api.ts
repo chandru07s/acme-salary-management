@@ -1,12 +1,16 @@
 import type {
   AgentAnswer,
+  Dashboard,
   Employee,
   EmployeeInput,
   EmployeePage,
   EmployeeUpdate,
+  EquityReport,
+  FxRate,
   Insights,
   ListQuery,
   Meta,
+  Position,
   SalaryChange,
 } from "./types";
 
@@ -65,6 +69,15 @@ export const api = {
   history: (id: number) => request<SalaryChange[]>(`/api/employees/${id}/history`),
   meta: () => request<Meta>("/api/meta"),
   insights: () => request<Insights>("/api/insights"),
+  dashboard: () => request<Dashboard>("/api/dashboard"),
+  equity: (q: { band?: string; country?: string; department?: string; page?: number; page_size?: number }) =>
+    request<EquityReport>(`/api/equity?${toSearchParams(q as Partial<ListQuery>)}`),
+  employee: (id: number) => request<Employee>(`/api/employees/${id}`),
+  position: (id: number) => request<Position>(`/api/employees/${id}/position`),
+  fxRates: () => request<FxRate[]>("/api/settings/fx"),
+  setFxRate: (currency: string, to_usd: number) =>
+    request<FxRate[]>(`/api/settings/fx/${currency}`, { method: "PUT", body: JSON.stringify({ to_usd }) }),
+  resetFxRates: () => request<FxRate[]>("/api/settings/fx/reset", { method: "POST" }),
   agentStatus: () => request<{ enabled: boolean }>("/api/agent/status"),
   askAgent: (question: string) =>
     request<AgentAnswer>("/api/agent/ask", { method: "POST", body: JSON.stringify({ question }) }),

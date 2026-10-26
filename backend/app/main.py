@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from app.database import SessionLocal, engine
 from app.db_setup import init_db
 from app.models import Employee
-from app.routes import agent, employees, insights
+from app.routes import agent, employees, insights, pages
 from app.services.employees import DuplicateEmailError, NotFoundError
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
 
     app.include_router(employees.router)
     app.include_router(insights.router)
+    app.include_router(pages.router)
     app.include_router(agent.router)
 
     # Single-service deploy: serve the built React app from the same origin.

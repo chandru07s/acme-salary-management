@@ -188,3 +188,51 @@ details > summary:hover { color: var(--ink); }
 .modal-title { font-family: var(--display); font-weight: 700; letter-spacing: -0.02em; }
 .modal-footer { border-top: 1px solid var(--line); background: #fbfcfe; border-radius: 0 0 18px 18px; }
 .modal-backdrop.show { opacity: 0.55; }
+
+/* Dashboard */
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 992px) { .dash-grid { grid-template-columns: 1fr; } }
+.attention { background: linear-gradient(180deg, #fff8ec, #fff 60%); border-color: #f3dfb8; }
+.attn-count { font-family: var(--display); font-size: 3rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1; color: #9a5b00; margin-bottom: 0.75rem; }
+.attn-count span { font-size: 1rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.kpi-warn { border-color: #f3dfb8; background: #fffaf0; }
+.hbar { display: grid; grid-template-columns: 110px 1fr 50px; gap: 0.75rem; align-items: center; font-size: 0.9rem; }
+.hbar-track { height: 8px; background: #edf0f5; border-radius: 99px; overflow: hidden; }
+.hbar-fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.hbar-val { text-align: right; font-weight: 600; }
+.feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.feed li + li { border-top: 1px solid var(--line); }
+.feed-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.25rem; color: inherit; text-decoration: none; border-radius: 8px; }
+.feed-link:hover { background: #f5f8fd; color: inherit; }
+.delta { font-weight: 600; font-size: 0.85rem; padding: 0.15rem 0.55rem; border-radius: 999px; }
+.delta.up { color: var(--good); background: var(--good-soft); } .delta.down { color: #a02c2c; background: #fbe9e9; }
+
+/* Pay equity */
+.kpis-3 { grid-template-columns: repeat(3, 1fr); margin-top: 0; }
+@media (max-width: 600px) { .kpis-3 { grid-template-columns: 1fr; } }
+.filters-3 { grid-template-columns: auto 1fr 1fr; align-items: end; }
+@media (max-width: 992px) { .filters-3 { grid-template-columns: 1fr; } }
+.stat { text-align: left; cursor: pointer; display: block; width: 100%; transition: transform 0.15s, border-color 0.15s; border-left-width: 4px; }
+.stat:hover { transform: translateY(-1px); }
+.stat.below { border-left-color: #d98a00; } .stat.within { border-left-color: #2f9e6b; } .stat.above { border-left-color: #6a4fc4; }
+.stat.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37, 106, 191, 0.18), var(--shadow); }
+.stat .kpi-value { display: block; }
+.compa { display: flex; align-items: center; gap: 0.7rem; }
+.compa-num { font-weight: 600; min-width: 2.6rem; }
+.compa-num.below { color: #a35f00; } .compa-num.above { color: #5b3fb0; } .compa-num.within { color: var(--good); }
+.gauge { position: relative; width: 90px; height: 6px; background: #e9edf4; border-radius: 99px; flex: none; }
+.gauge-mid { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: #9aa6bb; border-radius: 2px; }
+.gauge-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(16, 27, 52, 0.25); }
+.gauge-dot.below { background: #d98a00; } .gauge-dot.within { background: #2f9e6b; } .gauge-dot.above { background: #6a4fc4; }
+
+/* Employee profile */
+.back-link { display: inline-block; margin-bottom: 1rem; color: var(--muted); text-decoration: none; font-weight: 500; }
+.back-link:hover { color: var(--accent); }
+.profile-head { display: flex; align-items: flex-start; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.history-line { width: 100%; height: auto; max-height: 140px; margin-bottom: 1rem; }
+.timeline { list-style: none; margin: 0; padding: 0 0 0 1.1rem; border-left: 2px solid var(--line); display: grid; gap: 1rem; }
+.timeline li { position: relative; }
+.timeline li::before { content: ""; position: absolute; left: calc(-1.1rem - 6px); top: 0.4rem; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid var(--accent); }
+
+/* Sidebar settings link sits at the bottom of the nav */
+.side-link.push { margin-top: 0.75rem; }

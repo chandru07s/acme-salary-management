@@ -121,3 +121,62 @@ export interface AgentAnswer {
   guardrail: "input" | "output" | null;
   steps: AgentStep[];
 }
+
+export type EquityBand = "below" | "within" | "above";
+
+export interface EquityRow {
+  id: number;
+  full_name: string;
+  country: string;
+  country_name: string;
+  department: string;
+  job_title: string;
+  currency: string;
+  salary: number;
+  salary_usd: number;
+  peer_median: number | null;
+  peers: number;
+  compa_ratio: number | null;
+  band: EquityBand | null;
+  tenure_years: number;
+}
+
+export interface EquityReport {
+  summary: {
+    below: number; within: number; above: number; rated: number; unrated: number; below_pct: number;
+    thresholds: { below: number; above: number; min_peers: number };
+  };
+  below_by_department: { department: string; count: number }[];
+  items: EquityRow[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface Position {
+  peer_median: number | null;
+  peers: number;
+  compa_ratio: number | null;
+  band: EquityBand | null;
+  tenure_years: number;
+}
+
+export interface Dashboard {
+  summary: Stats;
+  hires_last_12_months: number;
+  headcount_by_country: { country: string; name: string; headcount: number }[];
+  recent_hires: { id: number; full_name: string; job_title: string; department: string; country_name: string; hire_date: string }[];
+  recent_changes: {
+    employee_id: number; full_name: string; currency: string; old_salary: number; new_salary: number;
+    change_pct: number; reason: string | null; changed_at: string;
+  }[];
+  equity: { below: number; below_pct: number; rated: number; below_by_department: { department: string; count: number }[] };
+}
+
+export interface FxRate {
+  currency: string;
+  to_usd: number;
+  default: number;
+  countries: string[];
+  editable: boolean;
+}

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { EmployeeDialog } from "../components/EmployeeDialog";
 import { IconClose, IconDownload, IconPlus, IconSearch } from "../components/Icons";
+import { Avatar } from "../components/Avatar";
 import { PageHeader } from "../components/PageHeader";
 import { formatDate, formatMoney, formatUsdCompact } from "../format";
-import type { Employee, EmployeePage, ListQuery, Meta, SortField } from "../types";
+import type { EmployeePage, ListQuery, Meta, SortField } from "../types";
 import { useDebounce } from "../useDebounce";
 
 interface Column {
@@ -45,8 +46,8 @@ export function DirectoryPage({ onDataChanged }: Props) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
 
-  // `null` = closed, "new" = add form, Employee = edit form.
-  const [editing, setEditing] = useState<Employee | "new" | null>(null);
+  // Only the "add" form lives here; editing happens on the employee page.
+  const [editing, setEditing] = useState<"new" | null>(null);
 
   const filterQuery = useMemo(
     () => ({
@@ -209,10 +210,10 @@ export function DirectoryPage({ onDataChanged }: Props) {
                 </tr>
               ))}
               {data?.items.map((e) => (
-                <tr key={e.id} className="clickable" onClick={() => setEditing(e)} style={{ opacity: loading ? 0.6 : 1 }}>
+                <tr key={e.id} className="clickable" onClick={() => { window.location.hash = `#/employee/${e.id}`; }} style={{ opacity: loading ? 0.6 : 1 }}>
                   <td>
                     <div className="person">
-                      <span className="avatar" style={avatarStyle(e.full_name)} aria-hidden>{initials(e.full_name)}</span>
+                      <Avatar name={e.full_name} />
                       <div className="text-truncate">
                         <div className="person-name">{e.full_name}</div>
                         <div className="person-mail">{e.email}</div>
@@ -267,7 +268,7 @@ export function DirectoryPage({ onDataChanged }: Props) {
 
       {editing && meta && (
         <EmployeeDialog
-          employee={editing === "new" ? null : editing}
+          employee={null}
           meta={meta}
           onClose={() => setEditing(null)}
           onSaved={handleSaved}
@@ -275,23 +276,6 @@ export function DirectoryPage({ onDataChanged }: Props) {
       )}
     </div>
   );
-}
-
-const TINTS = [
-  ["#e8f0fb", "#1b559d"], ["#e3f5ec", "#0f7a4d"], ["#fdeee3", "#a4511a"],
-  ["#efe9fb", "#5b3fb0"], ["#fbe8f0", "#a02c5d"], ["#e5f4f6", "#1d6b78"],
-];
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
-}
-
-function avatarStyle(name: string) {
-  let h = 0;
-  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const [bg, fg] = TINTS[h % TINTS.length];
-  return { background: bg, color: fg };
 }
 
 interface FilterSelectProps {
