@@ -1,4 +1,5 @@
 import type {
+  AgentAnswer,
   Employee,
   EmployeeInput,
   EmployeePage,
@@ -64,4 +65,7 @@ export const api = {
   history: (id: number) => request<SalaryChange[]>(`/api/employees/${id}/history`),
   meta: () => request<Meta>("/api/meta"),
   insights: () => request<Insights>("/api/insights"),
+  agentStatus: () => request<{ enabled: boolean }>("/api/agent/status"),
+  askAgent: (question: string) =>
+    request<AgentAnswer>("/api/agent/ask", { method: "POST", body: JSON.stringify({ question }) }),
 };

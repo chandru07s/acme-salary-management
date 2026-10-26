@@ -1,15 +1,7 @@
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
-import Paper from "@mui/material/Paper";
-import ToggleButton from "@mui/material/ToggleButton";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { RangeStrip } from "../components/RangeStrip";
 import { formatUsdCompact } from "../format";
-import { colors } from "../theme";
 import type { GroupStats, Insights } from "../types";
 
 type Group = "country" | "department" | "job_title";
@@ -34,8 +26,14 @@ export function InsightsPage() {
     api.insights().then(setData).catch((e: Error) => setError(e.message));
   }, []);
 
-  if (error) return <Alert severity="error">{error}</Alert>;
-  if (!data) return <LinearProgress aria-label="Loading insights" />;
+  if (error) return <div className="alert alert-danger" role="alert">{error}</div>;
+  if (!data) {
+    return (
+      <div className="progress" role="progressbar" aria-label="Loading insights">
+        <div className="progress-bar progress-bar-striped progress-bar-animated w-100" />
+      </div>
+    );
+  }
 
   const rows: GroupStats[] =
     group === "country" ? data.by_country : group === "department" ? data.by_department : data.by_job_title;
@@ -44,94 +42,100 @@ export function InsightsPage() {
   const maxBand = Math.max(1, ...data.distribution.map((b) => b.count));
 
   return (
-    <Box sx={{ display: "grid", gap: 2.5 }}>
-      <Box>
-        <Typography variant="h1">How ACME pays</Typography>
-        <Typography variant="subtitle2">
-          Active employees only. Local salaries are converted to USD at fixed reference rates.
-        </Typography>
-      </Box>
+    <div className="d-grid gap-4">
+      <div>
+        <h1 className="page-title">How ACME pays</h1>
+        <div className="text-secondary">Active employees only. Local salaries are converted to USD at fixed reference rates.</div>
+      </div>
 
-      <Paper sx={{ p: 2.5, display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" }, gap: 3 }}>
-        <Figure label="Employees" value={s.headcount.toLocaleString()} />
-        <Figure label="Annual payroll" value={formatUsdCompact(s.total)} />
-        <Figure label="Median salary" value={formatUsdCompact(s.median)} />
-        <Figure label="Average salary" value={formatUsdCompact(s.avg)} />
-        {s.headcount > 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ gridColumn: "1 / -1" }}>
-            {Math.abs(skew) < 0.05
-              ? "The average and median are close, so pay is fairly evenly spread."
-              : skew > 0
-                ? `The average is ${Math.round(skew * 100)}% above the median: a smaller group of high salaries pulls it up. Use the median for what a typical person earns.`
-                : `The average is ${Math.round(-skew * 100)}% below the median.`}
-          </Typography>
-        )}
-      </Paper>
+      <div className="card">
+        <div className="card-body">
+          <div className="row g-4">
+            <Figure label="Employees" value={s.headcount.toLocaleString()} />
+            <Figure label="Annual payroll" value={formatUsdCompact(s.total)} />
+            <Figure label="Median salary" value={formatUsdCompact(s.median)} />
+            <Figure label="Average salary" value={formatUsdCompact(s.avg)} />
+          </div>
+          {s.headcount > 0 && (
+            <p className="text-secondary mt-3 mb-0">
+              {Math.abs(skew) < 0.05
+                ? "The average and median are close, so pay is fairly evenly spread."
+                : skew > 0
+                  ? `The average is ${Math.round(skew * 100)}% above the median: a smaller group of high salaries pulls it up. Use the median for what a typical person earns.`
+                  : `The average is ${Math.round(-skew * 100)}% below the median.`}
+            </p>
+          )}
+        </div>
+      </div>
 
-      <Paper sx={{ p: 2.5 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 2 }}>
-          <Box>
-            <Typography variant="h2">Pay range by group</Typography>
-            <Legend />
-          </Box>
-          <ToggleButtonGroup exclusive size="small" value={group} aria-label="Group by"
-            onChange={(_, v: Group | null) => v && setGroup(v)}>
-            {GROUPS.map((g) => (
-              <ToggleButton key={g.value} value={g.value} sx={{ px: 2 }}>{g.label}</ToggleButton>
+      <div className="card">
+        <div className="card-body">
+          <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <h2 className="fs-5 fw-semibold mb-1">Pay range by group</h2>
+              <Legend />
+            </div>
+            <div className="btn-group" role="group" aria-label="Group by">
+              {GROUPS.map((g) => (
+                <button key={g.value} type="button" aria-pressed={group === g.value}
+                  className={`btn btn-sm ${group === g.value ? "btn-primary" : "btn-outline-primary"}`}
+                  onClick={() => setGroup(g.value)}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {rows.length === 0 ? (
+            <p className="text-secondary mb-0">No active employees yet. Add people in the Directory to see pay ranges.</p>
+          ) : (
+            <RangeStrip rows={rows} labelFor={group === "country" ? (k) => COUNTRY_NAMES[k] ?? k : undefined} />
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-body">
+          <h2 className="fs-5 fw-semibold mb-3">Salary bands (USD)</h2>
+          <div className="d-grid gap-2">
+            {data.distribution.map((b) => (
+              <div key={b.label} className="row align-items-center g-2">
+                <div className="col-3 col-md-2 small">{b.label}</div>
+                <div className="col">
+                  <div className="band-bar"><div style={{ width: `${(b.count / maxBand) * 100}%` }} /></div>
+                </div>
+                <div className="col-4 col-md-2 text-end small">
+                  {b.count.toLocaleString()} ({s.headcount ? Math.round((b.count / s.headcount) * 100) : 0}%)
+                </div>
+              </div>
             ))}
-          </ToggleButtonGroup>
-        </Box>
-        {rows.length === 0 ? (
-          <Typography color="text.secondary">No active employees yet. Add people in the Directory to see pay ranges.</Typography>
-        ) : (
-          <RangeStrip rows={rows} labelFor={group === "country" ? (k) => COUNTRY_NAMES[k] ?? k : undefined} />
-        )}
-      </Paper>
-
-      <Paper sx={{ p: 2.5 }}>
-        <Typography variant="h2" sx={{ mb: 2 }}>Salary bands (USD)</Typography>
-        <Box sx={{ display: "grid", gap: 1 }}>
-          {data.distribution.map((b) => (
-            <Box key={b.label} sx={{ display: "grid", gridTemplateColumns: "100px 1fr 120px", gap: 2, alignItems: "center" }}>
-              <Typography variant="body2">{b.label}</Typography>
-              <Box sx={{ height: 14, bgcolor: "#F1F4F7", borderRadius: 1 }}>
-                <Box sx={{ height: "100%", width: `${(b.count / maxBand) * 100}%`, bgcolor: colors.teal, borderRadius: 1 }} />
-              </Box>
-              <Typography variant="body2" align="right">
-                {b.count.toLocaleString()} ({s.headcount ? Math.round((b.count / s.headcount) * 100) : 0}%)
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Paper>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <Box>
-      <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography sx={{ fontSize: "1.75rem", fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.2 }}>{value}</Typography>
-    </Box>
+    <div className="col-6 col-md-3">
+      <div className="small text-secondary">{label}</div>
+      <div className="figure-value">{value}</div>
+    </div>
   );
 }
 
 function Legend() {
   return (
-    <Box sx={{ display: "flex", gap: 2, mt: 0.5, flexWrap: "wrap" }} aria-label="Legend">
-      <LegendItem swatch={<Box sx={{ width: 18, height: 10, borderRadius: 1, bgcolor: colors.rangeFill }} />} text="Lowest to highest" />
-      <LegendItem swatch={<Box sx={{ width: 3, height: 14, borderRadius: 1, bgcolor: colors.amber }} />} text="Median" />
-      <LegendItem swatch={<Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: colors.ink }} />} text="Average" />
-    </Box>
-  );
-}
-
-function LegendItem({ swatch, text }: { swatch: React.ReactNode; text: string }) {
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-      {swatch}
-      <Typography variant="caption" color="text.secondary">{text}</Typography>
-    </Box>
+    <div className="d-flex flex-wrap gap-3 small text-secondary" aria-label="Legend">
+      <span className="d-inline-flex align-items-center gap-1">
+        <span className="legend-swatch rounded-1" style={{ width: 18, height: 10, background: "var(--range-fill)" }} /> Lowest to highest
+      </span>
+      <span className="d-inline-flex align-items-center gap-1">
+        <span className="legend-swatch rounded-1" style={{ width: 3, height: 14, background: "var(--amber)" }} /> Median
+      </span>
+      <span className="d-inline-flex align-items-center gap-1">
+        <span className="legend-swatch rounded-circle" style={{ width: 10, height: 10, background: "var(--ink)" }} /> Average
+      </span>
+    </div>
   );
 }

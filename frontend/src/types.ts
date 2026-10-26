@@ -103,3 +103,16 @@ export interface ListQuery {
   page: number;
   page_size: number;
 }
+
+export interface AgentStep {
+  sql: string;
+  columns: string[];
+  rows: unknown[][];
+  truncated: boolean;
+  error: string | null;
+}
+
+export interface AgentAnswer {
+  answer: string;
+  steps: AgentStep[];
+}

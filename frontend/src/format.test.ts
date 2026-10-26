@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { describeError, toSearchParams } from "./api";
-import { formatMoney, formatUsdCompact, niceAxisMax, pct } from "./format";
+import { formatCell, formatMoney, formatUsdCompact, niceAxisMax, pct } from "./format";
 
 describe("formatUsdCompact", () => {
   it("abbreviates thousands and millions", () => {
@@ -51,5 +51,19 @@ describe("api helpers", () => {
   });
   it("passes through string details", () => {
     expect(describeError("Email already in use: a@b.com")).toBe("Email already in use: a@b.com");
+  });
+});
+
+describe("formatCell", () => {
+  it("shows a dash for missing values", () => {
+    expect(formatCell(null)).toBe("—");
+    expect(formatCell(undefined)).toBe("—");
+  });
+  it("formats numbers with separators and at most 2 decimals", () => {
+    expect(formatCell(127000)).toBe("127,000");
+    expect(formatCell(1234.5678)).toBe("1,234.57");
+  });
+  it("passes text through", () => {
+    expect(formatCell("Engineering")).toBe("Engineering");
   });
 });

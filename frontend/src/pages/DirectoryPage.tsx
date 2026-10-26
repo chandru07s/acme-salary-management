@@ -1,20 +1,3 @@
-import Alert from "@mui/material/Alert";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
-import LinearProgress from "@mui/material/LinearProgress";
-import MenuItem from "@mui/material/MenuItem";
-import Paper from "@mui/material/Paper";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { EmployeeDialog } from "../components/EmployeeDialog";
@@ -25,7 +8,7 @@ import { useDebounce } from "../useDebounce";
 interface Column {
   field: SortField;
   label: string;
-  align?: "right";
+  align?: "end";
 }
 
 const COLUMNS: Column[] = [
@@ -34,10 +17,10 @@ const COLUMNS: Column[] = [
   { field: "department", label: "Department" },
   { field: "job_title", label: "Job title" },
   { field: "hire_date", label: "Hired" },
-  { field: "salary_usd", label: "Annual salary", align: "right" },
+  { field: "salary_usd", label: "Annual salary", align: "end" },
 ];
 
-const ALL = "";
+const PAGE_SIZES = [25, 50, 100];
 
 interface Props {
   onDataChanged: () => void;
@@ -51,9 +34,9 @@ export function DirectoryPage({ onDataChanged }: Props) {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
-  const [country, setCountry] = useState(ALL);
-  const [department, setDepartment] = useState(ALL);
-  const [jobTitle, setJobTitle] = useState(ALL);
+  const [country, setCountry] = useState("");
+  const [department, setDepartment] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [status, setStatus] = useState("active");
   const [sortBy, setSortBy] = useState<SortField>("full_name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
@@ -95,7 +78,6 @@ export function DirectoryPage({ onDataChanged }: Props) {
 
   useEffect(loadMeta, [loadMeta]);
   useEffect(loadPage, [loadPage]);
-
   // Any filter change returns to page 1.
   useEffect(() => setPage(0), [filterQuery]);
 
@@ -117,117 +99,145 @@ export function DirectoryPage({ onDataChanged }: Props) {
   const hasFilters = Boolean(search || country || department || jobTitle || status !== "active");
   const clearFilters = () => {
     setSearch("");
-    setCountry(ALL);
-    setDepartment(ALL);
-    setJobTitle(ALL);
+    setCountry("");
+    setDepartment("");
+    setJobTitle("");
     setStatus("active");
   };
 
+  const total = data?.total ?? 0;
+  const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+  const from = total === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+
   return (
-    <Box sx={{ display: "grid", gap: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
-        <Box>
-          <Typography variant="h1">Employees</Typography>
-          <Typography variant="subtitle2">
-            {data ? `${data.total.toLocaleString()} ${data.total === 1 ? "person" : "people"}` : "Loading…"}
+    <div className="d-grid gap-3">
+      <div className="d-flex flex-wrap justify-content-between align-items-end gap-2">
+        <div>
+          <h1 className="page-title">Employees</h1>
+          <div className="text-secondary">
+            {data ? `${total.toLocaleString()} ${total === 1 ? "person" : "people"}` : "Loading…"}
             {" · salaries shown in local currency, with USD equivalent"}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button variant="outlined" href={api.exportUrl(filterQuery)} download>
+          </div>
+        </div>
+        <div className="d-flex gap-2">
+          <a className="btn btn-outline-primary" href={api.exportUrl(filterQuery)} download>
             Export CSV
-          </Button>
-          <Button variant="contained" onClick={() => setEditing("new")}>
+          </a>
+          <button className="btn btn-primary" onClick={() => setEditing("new")}>
             Add employee
-          </Button>
-        </Box>
-      </Box>
+          </button>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 2, display: "flex", gap: 1.5, flexWrap: "wrap", alignItems: "center" }}>
-        <TextField
-          size="small"
-          label="Search name or email"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ minWidth: 240, flexGrow: 1 }}
-        />
-        <FilterSelect label="Country" value={country} onChange={setCountry} width={160}
-          options={(meta?.countries ?? []).map((c) => ({ value: c.code, label: c.name }))} />
-        <FilterSelect label="Department" value={department} onChange={setDepartment} width={180}
-          options={(meta?.departments ?? []).map((d) => ({ value: d, label: d }))} />
-        <FilterSelect label="Job title" value={jobTitle} onChange={setJobTitle} width={220}
-          options={(meta?.job_titles ?? []).map((t) => ({ value: t, label: t }))} />
-        <FilterSelect label="Status" value={status} onChange={setStatus} width={140} allLabel="All"
-          options={[{ value: "active", label: "Active" }, { value: "terminated", label: "Terminated" }]} />
-        {hasFilters && <Button onClick={clearFilters}>Clear filters</Button>}
-      </Paper>
+      <div className="card">
+        <div className="card-body row g-2 align-items-end">
+          <div className="col-12 col-lg-3">
+            <label htmlFor="f-search" className="form-label small text-secondary mb-1">Search name or email</label>
+            <input id="f-search" className="form-control" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <FilterSelect id="f-country" label="Country" value={country} onChange={setCountry}
+            options={(meta?.countries ?? []).map((c) => ({ value: c.code, label: c.name }))} />
+          <FilterSelect id="f-dept" label="Department" value={department} onChange={setDepartment}
+            options={(meta?.departments ?? []).map((d) => ({ value: d, label: d }))} />
+          <FilterSelect id="f-title" label="Job title" value={jobTitle} onChange={setJobTitle}
+            options={(meta?.job_titles ?? []).map((t) => ({ value: t, label: t }))} />
+          <FilterSelect id="f-status" label="Status" value={status} onChange={setStatus}
+            options={[{ value: "active", label: "Active" }, { value: "terminated", label: "Terminated" }]} />
+          {hasFilters && (
+            <div className="col-auto">
+              <button className="btn btn-link px-0" onClick={clearFilters}>Clear filters</button>
+            </div>
+          )}
+        </div>
+      </div>
 
-      {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+      {error && (
+        <div className="alert alert-danger d-flex justify-content-between align-items-center mb-0" role="alert">
+          <span>{error}</span>
+          <button type="button" className="btn-close" aria-label="Dismiss" onClick={() => setError(null)} />
+        </div>
+      )}
 
-      <Paper sx={{ overflow: "hidden" }}>
-        <Box sx={{ height: 3 }}>{loading && <LinearProgress sx={{ height: 3 }} />}</Box>
-        <TableContainer>
-          <Table size="small" aria-label="Employees">
-            <TableHead>
-              <TableRow>
+      <div className="card overflow-hidden">
+        <div style={{ height: 3 }}>
+          {loading && (
+            <div className="progress rounded-0" style={{ height: 3 }} role="progressbar" aria-label="Loading">
+              <div className="progress-bar progress-bar-striped progress-bar-animated w-100" />
+            </div>
+          )}
+        </div>
+        <div className="table-responsive">
+          <table className="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
                 {COLUMNS.map((col) => (
-                  <TableCell key={col.field} align={col.align} sortDirection={sortBy === col.field ? order : false}>
-                    <TableSortLabel
-                      active={sortBy === col.field}
-                      direction={sortBy === col.field ? order : "asc"}
-                      onClick={() => toggleSort(col.field)}
-                    >
+                  <th
+                    key={col.field}
+                    scope="col"
+                    className={col.align === "end" ? "text-end" : undefined}
+                    aria-sort={sortBy === col.field ? (order === "asc" ? "ascending" : "descending") : "none"}
+                  >
+                    <button className="sortable" onClick={() => toggleSort(col.field)}>
                       {col.label}
-                    </TableSortLabel>
-                  </TableCell>
+                      {sortBy === col.field && <span aria-hidden> {order === "asc" ? "▲" : "▼"}</span>}
+                    </button>
+                  </th>
                 ))}
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
               {data?.items.map((e) => (
-                <TableRow key={e.id} hover onClick={() => setEditing(e)} sx={{ cursor: "pointer" }}>
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{e.full_name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{e.email}</Typography>
-                  </TableCell>
-                  <TableCell>{e.country}</TableCell>
-                  <TableCell>{e.department}</TableCell>
-                  <TableCell>{e.job_title}</TableCell>
-                  <TableCell>{formatDate(e.hire_date)}</TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>{formatMoney(e.salary, e.currency)}</Typography>
-                    {e.currency !== "USD" && (
-                      <Typography variant="caption" color="text.secondary">≈ {formatUsdCompact(e.salary_usd)}</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip size="small" label={e.status === "active" ? "Active" : "Terminated"}
-                      color={e.status === "active" ? "primary" : "default"} variant="outlined" />
-                  </TableCell>
-                </TableRow>
+                <tr key={e.id} className="clickable" onClick={() => setEditing(e)}>
+                  <td>
+                    <div className="fw-medium">{e.full_name}</div>
+                    <div className="small text-secondary">{e.email}</div>
+                  </td>
+                  <td>{e.country}</td>
+                  <td>{e.department}</td>
+                  <td>{e.job_title}</td>
+                  <td>{formatDate(e.hire_date)}</td>
+                  <td className="text-end">
+                    <div className="fw-medium">{formatMoney(e.salary, e.currency)}</div>
+                    {e.currency !== "USD" && <div className="small text-secondary">≈ {formatUsdCompact(e.salary_usd)}</div>}
+                  </td>
+                  <td>
+                    <span className={`badge ${e.status === "active" ? "text-bg-success" : "text-bg-secondary"}`}>
+                      {e.status === "active" ? "Active" : "Terminated"}
+                    </span>
+                  </td>
+                </tr>
               ))}
               {data && data.items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={COLUMNS.length + 1} sx={{ py: 6, textAlign: "center" }}>
-                    <Typography>No employees match these filters.</Typography>
-                    {hasFilters && <Button onClick={clearFilters} sx={{ mt: 1 }}>Clear filters</Button>}
-                  </TableCell>
-                </TableRow>
+                <tr>
+                  <td colSpan={COLUMNS.length + 1} className="text-center py-5">
+                    <div>No employees match these filters.</div>
+                    {hasFilters && <button className="btn btn-link" onClick={clearFilters}>Clear filters</button>}
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={data?.total ?? 0}
-          page={page}
-          onPageChange={(_, p) => setPage(p)}
-          rowsPerPage={pageSize}
-          onRowsPerPageChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
-          rowsPerPageOptions={[25, 50, 100]}
-        />
-      </Paper>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card-footer bg-white d-flex flex-wrap justify-content-end align-items-center gap-3">
+          <label className="d-flex align-items-center gap-2 small text-secondary mb-0">
+            Rows per page
+            <select className="form-select form-select-sm w-auto" value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}>
+              {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <span className="small text-secondary">{from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()}</span>
+          <div className="btn-group btn-group-sm" role="group" aria-label="Pagination">
+            <button className="btn btn-outline-secondary" disabled={page === 0} onClick={() => setPage(0)} aria-label="First page">«</button>
+            <button className="btn btn-outline-secondary" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Previous page">‹</button>
+            <button className="btn btn-outline-secondary" disabled={page >= lastPage} onClick={() => setPage(page + 1)} aria-label="Next page">›</button>
+            <button className="btn btn-outline-secondary" disabled={page >= lastPage} onClick={() => setPage(lastPage)} aria-label="Last page">»</button>
+          </div>
+        </div>
+      </div>
 
       {editing && meta && (
         <EmployeeDialog
@@ -237,26 +247,28 @@ export function DirectoryPage({ onDataChanged }: Props) {
           onSaved={handleSaved}
         />
       )}
-    </Box>
+    </div>
   );
 }
 
 interface FilterSelectProps {
+  id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
-  width: number;
-  allLabel?: string;
 }
 
-function FilterSelect({ label, value, onChange, options, width, allLabel = "All" }: FilterSelectProps) {
+function FilterSelect({ id, label, value, onChange, options }: FilterSelectProps) {
   return (
-    <TextField select size="small" label={label} value={value} onChange={(e) => onChange(e.target.value)} sx={{ width }}>
-      <MenuItem value={ALL}>{allLabel}</MenuItem>
-      {options.map((o) => (
-        <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-      ))}
-    </TextField>
+    <div className="col-6 col-lg">
+      <label htmlFor={id} className="form-label small text-secondary mb-1">{label}</label>
+      <select id={id} className="form-select" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }

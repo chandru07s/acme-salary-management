@@ -43,3 +43,12 @@ export function formatDate(iso: string): string {
     year: "numeric",
   });
 }
+
+/** A value from an agent query result, shown in a table cell. */
+export function formatCell(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? value.toLocaleString("en-US") : value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  }
+  return String(value);
+}

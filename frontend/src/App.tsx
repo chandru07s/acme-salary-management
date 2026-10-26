@@ -1,17 +1,18 @@
-import Box from "@mui/material/Box";
-import Container from "@mui/material/Container";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
-import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
+import { AskPage } from "./pages/AskPage";
 import { DirectoryPage } from "./pages/DirectoryPage";
 import { InsightsPage } from "./pages/InsightsPage";
-import { colors } from "./theme";
 
-type View = "directory" | "insights";
+type View = "directory" | "insights" | "ask";
+
+const TABS: { view: View; label: string; hash: string }[] = [
+  { view: "directory", label: "Directory", hash: "#/" },
+  { view: "insights", label: "Insights", hash: "#/insights" },
+  { view: "ask", label: "Ask the data", hash: "#/ask" },
+];
 
 function viewFromHash(): View {
-  return window.location.hash === "#/insights" ? "insights" : "directory";
+  return TABS.find((t) => t.hash === window.location.hash)?.view ?? "directory";
 }
 
 export default function App() {
@@ -25,37 +26,31 @@ export default function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const go = (next: View) => {
-    window.location.hash = next === "insights" ? "#/insights" : "#/";
-  };
-
   return (
-    <Box sx={{ minHeight: "100vh" }}>
-      <Box component="header" sx={{ bgcolor: colors.ink, color: "#fff" }}>
-        <Container maxWidth="xl" sx={{ display: "flex", alignItems: "center", gap: 4, py: 0.5 }}>
-          <Typography component="span" sx={{ fontWeight: 600, letterSpacing: "-0.01em" }}>
-            ACME Pay
-          </Typography>
-          <Tabs
-            value={view}
-            onChange={(_, v: View) => go(v)}
-            textColor="inherit"
-            slotProps={{ indicator: { style: { backgroundColor: "#5EEAD4" } } }}
-            aria-label="Main views"
-          >
-            <Tab value="directory" label="Directory" />
-            <Tab value="insights" label="Insights" />
-          </Tabs>
-        </Container>
-      </Box>
+    <>
+      <header className="app-header">
+        <div className="container-xl d-flex align-items-center gap-4">
+          <span className="brand">ACME Pay</span>
+          <nav className="nav" aria-label="Main views">
+            {TABS.map((t) => (
+              <a
+                key={t.view}
+                href={t.hash}
+                className={`nav-link${view === t.view ? " active" : ""}`}
+                aria-current={view === t.view ? "page" : undefined}
+              >
+                {t.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </header>
 
-      <Container maxWidth="xl" component="main" sx={{ py: 3 }}>
-        {view === "directory" ? (
-          <DirectoryPage onDataChanged={() => setDataVersion((v) => v + 1)} />
-        ) : (
-          <InsightsPage key={dataVersion} />
-        )}
-      </Container>
-    </Box>
+      <main className="container-xl py-4">
+        {view === "directory" && <DirectoryPage onDataChanged={() => setDataVersion((v) => v + 1)} />}
+        {view === "insights" && <InsightsPage key={dataVersion} />}
+        {view === "ask" && <AskPage />}
+      </main>
+    </>
   );
 }

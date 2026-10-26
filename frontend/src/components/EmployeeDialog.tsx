@@ -1,16 +1,4 @@
-import Alert from "@mui/material/Alert";
-import Autocomplete from "@mui/material/Autocomplete";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Divider from "@mui/material/Divider";
-import MenuItem from "@mui/material/MenuItem";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { formatDate, formatMoney } from "../format";
 import type { Employee, EmployeeInput, Meta, SalaryChange } from "../types";
@@ -53,10 +41,25 @@ export function EmployeeDialog({ employee, meta, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmTerminate, setConfirmTerminate] = useState(false);
+  const firstField = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (employee) api.history(employee.id).then(setHistory).catch(() => setHistory([]));
   }, [employee]);
+
+  // Modal behaviour: lock page scroll, focus the first field, close on Escape.
+  useEffect(() => {
+    document.body.classList.add("modal-open");
+    firstField.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, saving]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -65,7 +68,8 @@ export function EmployeeDialog({ employee, meta, onClose, onSaved }: Props) {
   const salaryNumber = Number(form.salary);
   const salaryChanged = isEdit && salaryNumber !== employee.salary;
 
-  const missing = !form.full_name.trim() || !form.email.trim() || !form.department.trim() ||
+  const missing =
+    !form.full_name.trim() || !form.email.trim() || !form.department.trim() ||
     !form.job_title.trim() || !form.hire_date || !(salaryNumber > 0);
 
   const run = async (action: () => Promise<unknown>) => {
@@ -76,7 +80,6 @@ export function EmployeeDialog({ employee, meta, onClose, onSaved }: Props) {
       onSaved();
     } catch (e) {
       setError((e as Error).message);
-    } finally {
       setSaving(false);
     }
   };
@@ -99,106 +102,138 @@ export function EmployeeDialog({ employee, meta, onClose, onSaved }: Props) {
   };
 
   return (
-    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm" aria-labelledby="employee-dialog-title">
-      <DialogTitle id="employee-dialog-title">{isEdit ? employee.full_name : "Add employee"}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: "grid", gap: 2, pt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
-          {isEdit && employee.status === "terminated" && (
-            <Alert severity="info">This person is terminated and is excluded from insights.</Alert>
-          )}
+    <>
+      <div className="modal d-block" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="employee-dialog-title"
+        onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) onClose(); }}>
+        <div className="modal-dialog modal-dialog-scrollable modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title fs-5" id="employee-dialog-title">{isEdit ? employee.full_name : "Add employee"}</h2>
+              <button type="button" className="btn-close" aria-label="Close" onClick={onClose} disabled={saving} />
+            </div>
 
-          <TextField label="Full name" required value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
-          <TextField label="Email" type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} />
+            <div className="modal-body">
+              <div className="d-grid gap-3">
+                {error && <div className="alert alert-danger mb-0" role="alert">{error}</div>}
+                {isEdit && employee.status === "terminated" && (
+                  <div className="alert alert-info mb-0">This person is terminated and is excluded from insights.</div>
+                )}
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-            <TextField select label="Country" required value={form.country} onChange={(e) => set("country", e.target.value)}>
-              {meta.countries.map((c) => (
-                <MenuItem key={c.code} value={c.code}>{c.name}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Hire date" type="date" required value={form.hire_date}
-              onChange={(e) => set("hire_date", e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          </Box>
+                <Field id="e-name" label="Full name">
+                  <input id="e-name" ref={firstField} className="form-control" required value={form.full_name}
+                    onChange={(e) => set("full_name", e.target.value)} />
+                </Field>
+                <Field id="e-email" label="Email">
+                  <input id="e-email" type="email" className="form-control" required value={form.email}
+                    onChange={(e) => set("email", e.target.value)} />
+                </Field>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
-            <Autocomplete
-              freeSolo options={meta.departments} inputValue={form.department}
-              onInputChange={(_, v) => set("department", v)}
-              renderInput={(p) => <TextField {...p} label="Department" required />}
-            />
-            <Autocomplete
-              freeSolo options={meta.job_titles} inputValue={form.job_title}
-              onInputChange={(_, v) => set("job_title", v)}
-              renderInput={(p) => <TextField {...p} label="Job title" required />}
-            />
-          </Box>
+                <div className="row g-3">
+                  <div className="col-sm-6">
+                    <Field id="e-country" label="Country">
+                      <select id="e-country" className="form-select" value={form.country} onChange={(e) => set("country", e.target.value)}>
+                        {meta.countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div className="col-sm-6">
+                    <Field id="e-hired" label="Hire date">
+                      <input id="e-hired" type="date" className="form-control" required value={form.hire_date}
+                        onChange={(e) => set("hire_date", e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="col-sm-6">
+                    <Field id="e-dept" label="Department">
+                      <input id="e-dept" list="dept-options" className="form-control" required value={form.department}
+                        onChange={(e) => set("department", e.target.value)} />
+                      <datalist id="dept-options">{meta.departments.map((d) => <option key={d} value={d} />)}</datalist>
+                    </Field>
+                  </div>
+                  <div className="col-sm-6">
+                    <Field id="e-title" label="Job title">
+                      <input id="e-title" list="title-options" className="form-control" required value={form.job_title}
+                        onChange={(e) => set("job_title", e.target.value)} />
+                      <datalist id="title-options">{meta.job_titles.map((t) => <option key={t} value={t} />)}</datalist>
+                    </Field>
+                  </div>
+                </div>
 
-          <TextField
-            label={`Annual salary (${currency})`} type="number" required value={form.salary}
-            onChange={(e) => set("salary", e.target.value)}
-            helperText={`Base salary per year, paid in ${currency}`}
-            slotProps={{ htmlInput: { min: 1, step: 1 } }}
-          />
-          {salaryChanged && (
-            <TextField
-              label="Reason for change" value={form.reason} onChange={(e) => set("reason", e.target.value)}
-              helperText="Saved in the salary history, for example “Annual review”"
-              slotProps={{ htmlInput: { maxLength: 200 } }}
-            />
-          )}
+                <Field id="e-salary" label={`Annual salary (${currency})`}>
+                  <input id="e-salary" type="number" min={1} step={1} className="form-control" required value={form.salary}
+                    onChange={(e) => set("salary", e.target.value)} aria-describedby="e-salary-help" />
+                  <div id="e-salary-help" className="form-text">Base salary per year, paid in {currency}</div>
+                </Field>
 
-          {isEdit && history.length > 0 && (
-            <Box>
-              <Divider sx={{ mb: 1.5 }} />
-              <Typography variant="h2" sx={{ mb: 1 }}>Salary history</Typography>
-              <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, display: "grid", gap: 0.75 }}>
-                {history.map((h) => (
-                  <Box component="li" key={h.id} sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
-                    <Typography variant="body2">
-                      {h.old_salary === null
-                        ? formatMoney(h.new_salary, employee.currency)
-                        : `${formatMoney(h.old_salary, employee.currency)} → ${formatMoney(h.new_salary, employee.currency)}`}
-                      {h.reason && <Typography component="span" variant="body2" color="text.secondary"> · {h.reason}</Typography>}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                      {formatDate(h.changed_at)}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </DialogContent>
+                {salaryChanged && (
+                  <Field id="e-reason" label="Reason for change">
+                    <input id="e-reason" className="form-control" maxLength={200} value={form.reason}
+                      onChange={(e) => set("reason", e.target.value)} aria-describedby="e-reason-help" />
+                    <div id="e-reason-help" className="form-text">Saved in the salary history, for example “Annual review”</div>
+                  </Field>
+                )}
 
-      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
-        <Box>
-          {isEdit && employee.status === "active" && (
-            confirmTerminate ? (
-              <Button color="error" variant="contained" disabled={saving} onClick={() => run(() => api.terminateEmployee(employee.id))}>
-                Confirm termination
-              </Button>
-            ) : (
-              <Button color="error" disabled={saving} onClick={() => setConfirmTerminate(true)}>Terminate employee</Button>
-            )
-          )}
-          {isEdit && employee.status === "terminated" && (
-            <Button disabled={saving} onClick={() => run(() => api.updateEmployee(employee.id, { status: "active" }))}>
-              Reactivate
-            </Button>
-          )}
-        </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button variant="contained" onClick={save} disabled={saving || missing}>
-            {isEdit ? "Save changes" : "Add employee"}
-          </Button>
-        </Box>
-      </DialogActions>
-    </Dialog>
+                {isEdit && history.length > 0 && (
+                  <section>
+                    <hr />
+                    <h3 className="fs-6 fw-semibold">Salary history</h3>
+                    <ul className="list-unstyled mb-0 d-grid gap-1">
+                      {history.map((h) => (
+                        <li key={h.id} className="d-flex justify-content-between gap-3 small">
+                          <span>
+                            {h.old_salary === null
+                              ? formatMoney(h.new_salary, employee.currency)
+                              : `${formatMoney(h.old_salary, employee.currency)} → ${formatMoney(h.new_salary, employee.currency)}`}
+                            {h.reason && <span className="text-secondary"> · {h.reason}</span>}
+                          </span>
+                          <span className="text-secondary text-nowrap">{formatDate(h.changed_at)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer justify-content-between">
+              <div>
+                {isEdit && employee.status === "active" && (
+                  confirmTerminate ? (
+                    <button className="btn btn-danger" disabled={saving} onClick={() => run(() => api.terminateEmployee(employee.id))}>
+                      Confirm termination
+                    </button>
+                  ) : (
+                    <button className="btn btn-outline-danger" disabled={saving} onClick={() => setConfirmTerminate(true)}>
+                      Terminate employee
+                    </button>
+                  )
+                )}
+                {isEdit && employee.status === "terminated" && (
+                  <button className="btn btn-outline-primary" disabled={saving}
+                    onClick={() => run(() => api.updateEmployee(employee.id, { status: "active" }))}>
+                    Reactivate
+                  </button>
+                )}
+              </div>
+              <div className="d-flex gap-2">
+                <button className="btn btn-outline-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+                <button className="btn btn-primary" onClick={save} disabled={saving || missing}>
+                  {saving ? "Saving…" : isEdit ? "Save changes" : "Add employee"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="modal-backdrop show" />
+    </>
+  );
+}
+
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="form-label mb-1">{label}</label>
+      {children}
+    </div>
   );
 }
