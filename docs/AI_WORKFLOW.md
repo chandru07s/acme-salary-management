@@ -24,6 +24,11 @@ Tool used: Claude (agentic, with shell + file tools).
 - **Decisions I took with the AI:** keep React (the brief names it) but style with Bootstrap; keep the tested FastAPI backend; give the agent exactly one tool (`run_sql`) over one SQL view; enforce safety in SQLite (authorizer) rather than in the prompt; inject the LLM client so tests are offline.
 - **Verified rather than trusted:** the authorizer rules had two real bugs found by tests (CTE reads were wrongly blocked; a CTE named like a real table could have unlocked it). SQL medians were cross-checked against the Python implementation on the 10k dataset.
 
+## v3: chart redesign
+- **Prompt:** "Change the charts and graphs style, it doesn't look that good."
+- **What the AI did:** applied a data-visualisation checklist (choose the form by the data's job, validate the colour palette with a script, thin marks, labels outside bars, table equivalent) and replaced my custom range strips with standard bar / stacked-bar / column charts.
+- **Verified rather than trusted:** colour palette run through a validator (my first teal choice failed); chart configs unit-tested; charts rendered to images with the real 10k dataset and inspected, which caught edge padding and spare space.
+
 ## Candidate notes (fill in before submitting; only write what is true)
 - What I decided myself:
 - What I changed or rejected from the AI's suggestions:

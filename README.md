@@ -11,14 +11,14 @@ Web software for an HR Manager to manage salaries for 10,000 employees across 8 
 - **Directory:** server-side search, filters (country, department, job title, status), sortable columns,
   pagination, add / edit / terminate / reactivate, CSV export of the filtered list.
 - **Salary history:** every salary change is recorded with a reason.
-- **Insights:** headcount, payroll, median and average; pay range (min / median / average / max) by country,
-  department and job title on a shared USD axis; salary bands.
+- **Insights:** headcount, payroll, median and average; median pay by country / department / job title (bar chart),
+  share of payroll (stacked bar), salary bands (columns) and a details table with min / median / average / max.
 - **Ask the data (AI):** ask questions in plain English; an AI analyst writes read-only SQL over a privacy-trimmed
   view, runs it and answers, and the UI shows the SQL it used.
 - Multi-currency: salaries are stored in local currency and normalised to USD for comparison.
 
 ## Stack
-Python · FastAPI · SQLAlchemy 2 · SQLite (plain SQL view + window functions) · React 19 · TypeScript · Vite · Bootstrap 5 · OpenAI tool calling
+Python · FastAPI · SQLAlchemy 2 · SQLite (plain SQL view + window functions) · React 19 · TypeScript · Vite · Bootstrap 5 · Chart.js · OpenAI tool calling
 
 ## Run locally
 ```bash
@@ -40,7 +40,7 @@ To serve everything from one port, run `npm run build` in `frontend/` and open h
 ## Tests
 ```bash
 cd backend  && python -m pytest     # 111 tests, ~1s, in-memory SQLite, LLM faked (no network, no key needed)
-cd frontend && npm test             # 12 formatting / API-helper unit tests
+cd frontend && npm test             # 36 unit tests (formatting, API helpers, chart data and configs)
 ```
 
 ## Deploy

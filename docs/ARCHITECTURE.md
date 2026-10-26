@@ -32,6 +32,22 @@ functions, so the money maths is unit-tested with hand-computed values and no da
 | SQLite | Zero-ops, per the brief | Single writer; swap `DATABASE_URL` for Postgres (SQLAlchemy code is portable) |
 | API serves the built UI | One deployable, no CORS in production | Separate CDN hosting is easy later |
 
+## Charts (Insights page)
+Chart choices follow the job of the data, not decoration:
+
+| Question | Form | Why |
+|---|---|---|
+| How does median pay compare across groups? | Horizontal bars, **one colour**, value at the bar end | Nominal categories: colour carries no extra meaning, so length does the work. Zero baseline keeps bar lengths honest |
+| Where does the payroll budget go? | One 100% stacked bar (at most 8 coloured parts + Other) | Part-to-whole. A pie/donut with 8 slices is hard to compare. Not shown for job titles (24 titles would be noise); the table has every share |
+| How many people earn in each band? | Columns in band order, one colour, count on top | Ordered buckets (a histogram) |
+| What are the exact numbers? | Table (also the accessible equivalent of every chart) | Tooltips never gate information |
+
+- **Palette validated, not eyeballed.** The 8 categorical colours were run through a validator (lightness band, chroma floor, colour-blind separation of neighbouring slots, contrast). My original teal failed the chroma check (it reads as grey), so the app accent was moved to the matching blue.
+- **Colour follows the entity.** A country or department always gets the same slot (by sorted name), so sorting never repaints; beyond 8 entities the tail folds into a neutral "Other" instead of inventing a 9th hue.
+- **Thin marks, hairline grid, labels outside the bars,** and a segment label is drawn only when it fits.
+- **Config is plain code** (`chartConfigs.ts`), unit-tested, and was rendered to images with real data to check layout before shipping.
+- Limitation: light theme only (no dark mode), and Chart.js canvas charts need the table as the screen-reader alternative.
+
 ## The "Ask the data" agent
 Flow: question -> LLM (tools: `run_sql`) -> read-only SQL -> rows -> LLM -> answer. The UI shows the answer and the SQL.
 
