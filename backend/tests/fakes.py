@@ -13,6 +13,12 @@ def reply(content: str | None = None, calls: list | None = None):
     return SimpleNamespace(content=content, tool_calls=calls)
 
 
+def final(answer: str, assumptions: list[str] | None = None, answerable: bool = True, call_id: str = "f1"):
+    """A model reply that finishes with the structured final_answer tool."""
+    args = json.dumps({"answer": answer, "assumptions": assumptions or [], "answerable": answerable})
+    return reply(calls=[tool_call(call_id, "", name="final_answer", raw_arguments=args)])
+
+
 class FakeClient:
     """Returns the scripted replies in order and records what the agent sent."""
 

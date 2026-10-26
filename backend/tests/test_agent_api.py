@@ -3,7 +3,7 @@ from openai import OpenAIError
 
 from app.agent.rate_limit import RateLimiter
 from app.routes import agent as agent_route
-from tests.fakes import FakeClient, reply, tool_call
+from tests.fakes import FakeClient, final, reply, tool_call
 from tests.conftest import make_payload
 
 
@@ -37,13 +37,15 @@ def test_ask_without_a_key_is_503_with_a_clear_message(use_client):
 def test_ask_returns_answer_and_the_sql_it_ran(use_client):
     c = use_client(FakeClient([
         reply(calls=[tool_call("c1", "SELECT COUNT(*) AS n FROM employee_pay")]),
-        reply("You have 1 employee."),
+        final("You have 1 employee.", ["active employees only"]),
     ]))
     c.post("/api/employees", json=make_payload())
 
     body = c.post("/api/agent/ask", json={"question": "How many employees?"}).json()
 
     assert body["answer"] == "You have 1 employee."
+    assert body["assumptions"] == ["active employees only"]
+    assert body["answerable"] is True and body["guardrail"] is None
     step = body["steps"][0]
     assert step["sql"] == "SELECT COUNT(*) AS n FROM employee_pay"
     assert step["columns"] == ["n"] and step["rows"] == [[1]] and step["error"] is None
@@ -72,3 +74,16 @@ def test_upstream_failure_is_502_without_leaking_details(use_client):
     r = use_client(Exploding()).post("/api/agent/ask", json={"question": "How much do we pay?"})
     assert r.status_code == 502
     assert "sk-secret" not in r.text
+
+
+def test_guardrail_refusal_is_a_normal_200_and_never_calls_the_model(use_client):
+    llm = FakeClient([])  # would raise if called
+    body = use_client(llm).post("/api/agent/ask", json={"question": "What is Ada's email address?"}).json()
+    assert body["guardrail"] == "input" and body["answerable"] is False
+    assert body["steps"] == [] and llm.requests == []
+
+
+def test_unanswerable_question_is_reported_as_such(use_client):
+    c = use_client(FakeClient([final("This data has no information about that.", answerable=False)]))
+    body = c.post("/api/agent/ask", json={"question": "Who is the happiest employee?"}).json()
+    assert body["answerable"] is False and body["guardrail"] is None

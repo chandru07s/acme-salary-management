@@ -31,6 +31,9 @@ class StepOut(BaseModel):
 
 class AskResponse(BaseModel):
     answer: str
+    answerable: bool
+    assumptions: list[str]
+    guardrail: str | None  # "input" / "output" when a guardrail produced the answer
     steps: list[StepOut]
 
 
@@ -80,5 +83,8 @@ def ask(
         raise HTTPException(502, "The AI service returned an error. Check the API key, model name and quota.") from None
     return AskResponse(
         answer=result.answer,
+        answerable=result.answerable,
+        assumptions=result.assumptions,
+        guardrail=result.guardrail,
         steps=[StepOut(**s.__dict__) for s in result.steps],
     )
