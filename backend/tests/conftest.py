@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth import Principal, current_user
 from app.database import get_db
 from app.db_setup import init_db
 from app.main import create_app
@@ -30,7 +31,19 @@ def db():
 def client(db):
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db
+    # Most tests are about behaviour, not sign-in: act as an HR user. test_auth.py exercises real login.
+    app.dependency_overrides[current_user] = lambda: Principal("hr@acme.test", "Hana Rao", "hr")
     return TestClient(app)
+
+
+@pytest.fixture()
+def act_as(client):
+    """Switch the signed-in role mid-test: act_as("owner")."""
+
+    def _switch(role: str, email: str | None = None):
+        client.app.dependency_overrides[current_user] = lambda: Principal(email or f"{role}@acme.test", role.title(), role)
+
+    return _switch
 
 
 def make_payload(**overrides) -> dict:

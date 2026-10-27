@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.config import COUNTRY_CURRENCY, COUNTRY_NAMES
+from app.auth import require_roles
 from app.currency import to_usd
 from app.database import get_db
 from app.schemas import (
@@ -90,17 +91,17 @@ def get_employee(employee_id: int, db: Session = Depends(get_db)):
     return EmployeeOut.from_employee(svc.get_employee(db, employee_id))
 
 
-@router.post("/employees", response_model=EmployeeOut, status_code=status.HTTP_201_CREATED)
+@router.post("/employees", response_model=EmployeeOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles("hr"))])
 def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
     return EmployeeOut.from_employee(svc.create_employee(db, payload))
 
 
-@router.patch("/employees/{employee_id}", response_model=EmployeeOut)
+@router.patch("/employees/{employee_id}", response_model=EmployeeOut, dependencies=[Depends(require_roles("hr"))])
 def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Depends(get_db)):
     return EmployeeOut.from_employee(svc.update_employee(db, employee_id, payload))
 
 
-@router.delete("/employees/{employee_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/employees/{employee_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles("hr"))])
 def deactivate_employee(employee_id: int, db: Session = Depends(get_db)):
     """Soft delete – marks the employee as terminated."""
     svc.deactivate_employee(db, employee_id)

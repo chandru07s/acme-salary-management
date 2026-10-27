@@ -14,3 +14,7 @@ services:
         value: gpt-4o-mini
       - key: AGENT_MAX_REQUESTS_PER_HOUR
         value: "60"
+      - key: SECRET_KEY           # signs login tokens; Render generates a random value
+        generateValue: true
+      - key: DEMO_PASSWORD        # password for the three demo accounts (hr@, owner@, viewer@acme.test)
+        value: demo1234

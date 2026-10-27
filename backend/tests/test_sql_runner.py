@@ -121,3 +121,13 @@ class TestLimits:
     def test_sql_errors_become_readable_messages(self, db):
         with pytest.raises(SqlRejected, match="SQL error"):
             run(db, "SELECT nonsense FROM employee_pay")
+
+
+import pytest as _pytest
+
+@_pytest.mark.parametrize("table", ["users", "payslips", "payroll_runs", "variable_pay", "app_config", "payroll_events", "employees"])
+def test_agent_cannot_read_payroll_or_login_tables(db, table):
+    from app.agent.sql_runner import SqlRejected, run_readonly_sql
+
+    with _pytest.raises(SqlRejected):
+        run_readonly_sql(db.get_bind(), f"SELECT * FROM {table}")

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.auth import require_roles
 from app.config import COUNTRY_CURRENCY, COUNTRY_NAMES, DEFAULT_FX_TO_USD, FX_TO_USD
 from app.database import get_db
 from app.services import dashboard as dashboard_svc
@@ -57,7 +58,7 @@ def get_fx():
     return _fx_list()
 
 
-@router.put("/settings/fx/{currency}")
+@router.put("/settings/fx/{currency}", dependencies=[Depends(require_roles("hr"))])
 def put_fx(currency: str, payload: FxUpdate, db: Session = Depends(get_db)):
     currency = currency.upper()
     if currency not in FX_TO_USD:
@@ -70,7 +71,7 @@ def put_fx(currency: str, payload: FxUpdate, db: Session = Depends(get_db)):
     return _fx_list()
 
 
-@router.post("/settings/fx/reset")
+@router.post("/settings/fx/reset", dependencies=[Depends(require_roles("hr"))])
 def reset_fx(db: Session = Depends(get_db)):
     for currency, rate in DEFAULT_FX_TO_USD.items():
         db.execute(text("UPDATE fx_rates SET to_usd = :r WHERE currency = :c"), {"r": rate, "c": currency})

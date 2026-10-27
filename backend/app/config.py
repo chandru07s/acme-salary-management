@@ -51,3 +51,19 @@ DEFAULT_FX_TO_USD: dict[str, float] = dict(FX_TO_USD)
 
 # Upper bounds (USD, exclusive) for the salary distribution histogram.
 SALARY_BAND_EDGES_USD: list[int] = [30_000, 50_000, 75_000, 100_000, 150_000, 200_000]
+
+# Pay structure and deduction defaults (editable on the Settings page; stored in app_config).
+# The deduction rates are flat, illustrative figures. They are NOT statutory EPF/ESI/PT/TDS rules.
+PAY_DEFAULTS: dict[str, float] = {
+    "basic_pct": 40.0,         # Basic pay as % of annual gross
+    "hra_pct_of_basic": 50.0,  # HRA as % of Basic; Special allowance is the remainder
+    "retirement_pct": 12.0,    # retirement contribution, % of Basic
+    "tax_pct": 10.0,           # flat income-tax withholding, % of gross
+}
+PAY_LIMITS: dict[str, tuple[float, float]] = {
+    "basic_pct": (10.0, 80.0),
+    "hra_pct_of_basic": (0.0, 100.0),
+    "retirement_pct": (0.0, 30.0),
+    "tax_pct": (0.0, 50.0),
+}
+ROLES = ("hr", "owner", "viewer")
