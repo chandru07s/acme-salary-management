@@ -52,3 +52,10 @@ export function formatCell(value: unknown): string {
   }
   return String(value);
 }
+
+/** "2026-03" -> "March 2026" */
+export function formatMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) return month;
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+}

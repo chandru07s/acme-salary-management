@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
+import { can, useAuth } from "../auth";
 import { Avatar } from "../components/Avatar";
 import { EmployeeDialog } from "../components/EmployeeDialog";
+import { PayslipsPanel, StructurePanel, VariablePayPanel } from "../components/PayPanels";
 import { RatioBadge, bandLabel } from "../components/RatioBadge";
 import { formatDate, formatMoney, formatUsdCompact } from "../format";
 import type { Employee, Meta, Position, SalaryChange } from "../types";
 
 export function EmployeePage({ id, onDataChanged }: { id: number; onDataChanged: () => void }) {
+  const { user } = useAuth();
+  const [version, setVersion] = useState(0);
   const [emp, setEmp] = useState<Employee | null>(null);
   const [pos, setPos] = useState<Position | null>(null);
   const [history, setHistory] = useState<SalaryChange[]>([]);
@@ -44,7 +48,7 @@ export function EmployeePage({ id, onDataChanged }: { id: number; onDataChanged:
         </div>
         <div className="d-flex gap-2 align-items-start">
           <span className={`status ${emp.status}`}>{emp.status === "active" ? "Active" : "Terminated"}</span>
-          <button className="btn btn-primary" onClick={() => setEditing(true)}>Edit</button>
+          {can.editData(user.role) && <button className="btn btn-primary" onClick={() => setEditing(true)}>Edit</button>}
         </div>
       </header>
 
@@ -74,7 +78,13 @@ export function EmployeePage({ id, onDataChanged }: { id: number; onDataChanged:
         </div>
       </div>
 
-      <section className="panel" aria-labelledby="h-hist">
+      <div className="profile-grid">
+        <StructurePanel id={id} version={version} />
+        {can.readPayroll(user.role) && <VariablePayPanel id={id} currency={emp.currency} />}
+      </div>
+      {can.readPayroll(user.role) && <div className="mt-3"><PayslipsPanel key={version} id={id} /></div>}
+
+      <section className="panel mt-3" aria-labelledby="h-hist">
         <h2 className="chart-title" id="h-hist">Salary history</h2>
         <p className="chart-sub">Every change is recorded with its reason.</p>
         {history.length > 1 && <HistoryLine history={history} currency={emp.currency} />}
@@ -96,7 +106,7 @@ export function EmployeePage({ id, onDataChanged }: { id: number; onDataChanged:
 
       {editing && meta && (
         <EmployeeDialog employee={emp} meta={meta} onClose={() => setEditing(false)}
-          onSaved={() => { setEditing(false); load(); onDataChanged(); }} />
+          onSaved={() => { setEditing(false); load(); setVersion((v) => v + 1); onDataChanged(); }} />
       )}
     </div>
   );

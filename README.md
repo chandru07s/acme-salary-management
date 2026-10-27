@@ -12,6 +12,8 @@ Web software for an HR Manager to manage salaries for 10,000 employees across 8 
   pagination, add / edit / terminate / reactivate, CSV export of the filtered list.
 - **Salary history:** every salary change is recorded with a reason.
 - **Dashboard, Pay equity, Employee profile, Settings:** a home page with an attention panel; compa-ratio (salary / median of the same job title in the same country; below 0.85 is flagged, groups under 3 people are not benchmarked); a profile page with salary history; editable FX rates that re-price every USD figure (including sorting and the AI analyst's view).
+- **Sign-in and roles:** three demo accounts (password `demo1234`, override with `DEMO_PASSWORD`): `hr@acme.test` edits data and prepares payroll; `owner@acme.test` approves payroll; `viewer@acme.test` is read-only and cannot see payroll. Set `SECRET_KEY` in production.
+- **Payroll:** salary structure (Basic / HRA / Special), bonuses and reimbursements, a monthly run that builds a payslip per active employee (hire month prorated), maker-checker approval with an audit trail, and a branded payslip PDF. Approved runs are frozen and payslips are snapshots, so later changes never rewrite history.
 - **Insights:** headcount, payroll, median and average; median pay by country / department / job title (bar chart),
   share of payroll (stacked bar), salary bands (columns) and a details table with min / median / average / max.
 - **Ask the data (AI):** ask questions in plain English; an AI analyst writes read-only SQL over a privacy-trimmed
@@ -79,6 +81,14 @@ docker build -t acme-salary . && docker run -p 8000:8000 acme-salary
 | POST / PATCH / DELETE | `/api/employees[/{id}]` | create / partial update / soft delete |
 | GET | `/api/employees/{id}/history` | salary history, newest first |
 | GET | `/api/insights` | summary, by country/department/job title, distribution |
+| POST / GET | `/api/auth/login`, `/api/auth/me` | sign in (returns a signed token) / who am I. Everything else needs `Authorization: Bearer <token>` |
+| GET / PUT | `/api/settings/pay-config` | Basic %, HRA % of Basic, retirement %, tax % (hr edits) |
+| GET | `/api/employees/{id}/structure` | monthly and annual Basic / HRA / Special split |
+| GET / POST / DELETE | `/api/employees/{id}/variable-pay`, `/api/variable-pay/{id}` | bonuses, incentives, reimbursements (hr; locked once the month is submitted) |
+| GET / POST / DELETE | `/api/payroll/runs[/{id}]` | list / prepare a month / delete a draft |
+| GET | `/api/payroll/runs/{id}/payslips` | payslips of a run (search, paging) |
+| POST | `/api/payroll/runs/{id}/{regenerate,submit,approve,reject}` | the maker-checker workflow |
+| GET | `/api/payslips/{id}/pdf`, `/api/employees/{id}/payslips` | payslip PDF / an employee's payslips |
 | GET | `/api/dashboard` | home page: headline numbers, latest hires, recent raises, pay-equity alert |
 | GET | `/api/equity` | pay equity: `band (below/within/above), country, department, page` (compa-ratio vs same title and country) |
 | GET | `/api/employees/{id}/position` | one person's compa-ratio, peer median, peers, tenure |
@@ -86,3 +96,11 @@ docker build -t acme-salary . && docker run -p 8000:8000 acme-salary
 | GET | `/api/meta` | countries (with currency), departments, job titles |
 | GET | `/api/agent/status` | `{enabled}`: is an OpenAI key configured |
 | POST | `/api/agent/ask` | `{question}` -> `{answer, answerable, assumptions[], guardrail, steps:[{sql, columns, rows, error}]}` (rate limited) |
+
+
+## Payroll scope and honest limits
+
+- Deduction rates (retirement, tax) are flat illustrative rates, **not** statutory EPF/ESI/PT/TDS rules. Real compliance needs slabs, wage ceilings and state rules that cannot be verified here.
+- Not built: attendance, leave, leave-without-pay, document vault, Form 16, bank payout files, full-and-final settlement, arrears, PAN/Aadhaar/bank details (deliberately: no identity numbers in a demo repo).
+- Terminated employees have no exit date stored, so they are simply excluded from new runs (no mid-month exit proration).
+- Roles are enforced on the server; the UI only hides buttons that would be refused. The AI analyst can read only the `employee_pay` view and `fx_rates`, never users, payslips or payroll tables (tested).

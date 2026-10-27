@@ -16,3 +16,11 @@ describe("parseHash", () => {
     expect(parseHash("").view).toBe("dashboard");
   });
 });
+
+describe("payroll routes", () => {
+  it("parses the list and run pages", () => {
+    expect(parseHash("#/payroll").view).toBe("payroll");
+    expect(parseHash("#/payroll/7")).toEqual({ view: "payrollRun", id: 7 });
+    expect(parseHash("#/payroll/x").view).toBe("dashboard");
+  });
+});

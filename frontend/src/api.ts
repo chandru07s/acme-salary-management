@@ -10,9 +10,19 @@ import type {
   Insights,
   ListQuery,
   Meta,
+  PayConfig,
+  PayrollRun,
+  PayrollRunDetail,
+  PayslipPage,
+  PayslipRow,
   Position,
   SalaryChange,
+  Structure,
+  User,
+  VariableKind,
+  VariablePayItem,
 } from "./types";
+import { AUTH_EXPIRED_EVENT, getToken, setToken } from "./auth";
 
 export class ApiError extends Error {
   status: number;
@@ -37,15 +47,50 @@ export function describeError(detail: unknown): string {
   return "Something went wrong. Try again.";
 }
 
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/** An expired or invalid session sends the person back to the sign-in screen. */
+function handleUnauthorized(path: string, status: number) {
+  if (status === 401 && !path.startsWith("/api/auth/login")) {
+    setToken(null);
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...init?.headers },
   });
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(describeError(body.detail), res.status);
+  if (!res.ok) {
+    handleUnauthorized(path, res.status);
+    throw new ApiError(describeError(body.detail), res.status);
+  }
   return body as T;
+}
+
+/** Download a protected file (the browser can't attach our token to a plain link). */
+async function download(path: string, fallbackName: string): Promise<void> {
+  const res = await fetch(path, { headers: authHeaders() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    handleUnauthorized(path, res.status);
+    throw new ApiError(describeError(body.detail), res.status);
+  }
+  const match = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "");
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = match?.[1] ?? fallbackName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function toSearchParams(query: Partial<ListQuery>): URLSearchParams {
@@ -78,6 +123,30 @@ export const api = {
   setFxRate: (currency: string, to_usd: number) =>
     request<FxRate[]>(`/api/settings/fx/${currency}`, { method: "PUT", body: JSON.stringify({ to_usd }) }),
   resetFxRates: () => request<FxRate[]>("/api/settings/fx/reset", { method: "POST" }),
+  login: (email: string, password: string) =>
+    request<{ token: string; user: User }>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  me: () => request<User>("/api/auth/me"),
+  downloadCsv: (query: Omit<ListQuery, "page" | "page_size">) => download(api.exportUrl(query), "employees.csv"),
+  downloadPayslip: (id: number) => download(`/api/payslips/${id}/pdf`, "payslip.pdf"),
+  payConfig: () => request<PayConfig>("/api/settings/pay-config"),
+  setPayConfig: (values: Partial<Omit<PayConfig, "limits">>) =>
+    request<PayConfig>("/api/settings/pay-config", { method: "PUT", body: JSON.stringify(values) }),
+  structure: (id: number) => request<Structure>(`/api/employees/${id}/structure`),
+  variablePay: (id: number) => request<VariablePayItem[]>(`/api/employees/${id}/variable-pay`),
+  addVariablePay: (id: number, data: { kind: VariableKind; amount: number; month: string; note?: string }) =>
+    request<VariablePayItem>(`/api/employees/${id}/variable-pay`, { method: "POST", body: JSON.stringify(data) }),
+  deleteVariablePay: (itemId: number) => request<void>(`/api/variable-pay/${itemId}`, { method: "DELETE" }),
+  employeePayslips: (id: number) => request<PayslipRow[]>(`/api/employees/${id}/payslips`),
+  runs: () => request<PayrollRun[]>("/api/payroll/runs"),
+  run: (id: number) => request<PayrollRunDetail>(`/api/payroll/runs/${id}`),
+  createRun: (month: string) => request<PayrollRun>("/api/payroll/runs", { method: "POST", body: JSON.stringify({ month }) }),
+  runPayslips: (id: number, q: { q?: string; page?: number; page_size?: number }) =>
+    request<PayslipPage>(`/api/payroll/runs/${id}/payslips?${toSearchParams(q as Partial<ListQuery>)}`),
+  runAction: (id: number, action: "regenerate" | "submit" | "approve", body?: object) =>
+    request<PayrollRun>(`/api/payroll/runs/${id}/${action}`, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  rejectRun: (id: number, note: string) =>
+    request<PayrollRun>(`/api/payroll/runs/${id}/reject`, { method: "POST", body: JSON.stringify({ note }) }),
+  deleteRun: (id: number) => request<void>(`/api/payroll/runs/${id}`, { method: "DELETE" }),
   agentStatus: () => request<{ enabled: boolean }>("/api/agent/status"),
   askAgent: (question: string) =>
     request<AgentAnswer>("/api/agent/ask", { method: "POST", body: JSON.stringify({ question }) }),

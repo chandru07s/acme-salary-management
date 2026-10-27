@@ -180,3 +180,95 @@ export interface FxRate {
   countries: string[];
   editable: boolean;
 }
+
+export type Role = "hr" | "owner" | "viewer";
+
+export interface User {
+  email: string;
+  name: string;
+  role: Role;
+}
+
+export interface PayConfig {
+  basic_pct: number;
+  hra_pct_of_basic: number;
+  retirement_pct: number;
+  tax_pct: number;
+  limits: Record<keyof Omit<PayConfig, "limits">, [number, number]>;
+}
+
+export interface Structure {
+  currency: string;
+  monthly: { gross: number; basic: number; hra: number; special: number };
+  annual: { gross: number; basic: number; hra: number; special: number };
+}
+
+export type VariableKind = "bonus" | "incentive" | "reimbursement";
+
+export interface VariablePayItem {
+  id: number;
+  kind: VariableKind;
+  amount: number;
+  month: string;
+  note: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export type RunStatus = "draft" | "pending_approval" | "approved";
+
+export interface PayrollRun {
+  id: number;
+  month: string;
+  status: RunStatus;
+  created_by: string;
+  created_at: string;
+  approved_by: string | null;
+  approved_at: string | null;
+  reject_note: string | null;
+  headcount: number;
+  gross_usd: number;
+  net_usd: number;
+  deductions_usd: number;
+}
+
+export interface RunEvent {
+  actor: string;
+  action: string;
+  note: string | null;
+  at: string;
+}
+
+export interface PayrollRunDetail extends PayrollRun {
+  events: RunEvent[];
+}
+
+export interface PayslipRow {
+  id: number;
+  run_id: number;
+  employee_id: number;
+  full_name: string;
+  department: string;
+  job_title: string;
+  currency: string;
+  proration: number;
+  basic: number;
+  hra: number;
+  special: number;
+  variable: number;
+  gross: number;
+  retirement: number;
+  tax: number;
+  reimbursement: number;
+  net: number;
+  net_usd: number;
+  month?: string;
+  status?: RunStatus;
+}
+
+export interface PayslipPage {
+  items: PayslipRow[];
+  total: number;
+  page: number;
+  page_size: number;
+}

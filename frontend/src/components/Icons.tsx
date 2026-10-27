@@ -23,6 +23,8 @@ export const IconHome = () => <Svg><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h
 export const IconScale = () => <Svg><path d="M12 4v16M6 20h12M5 8h14" /><path d="M5 8 2.5 14a3 3 0 0 0 5 0zM19 8l-2.5 6a3 3 0 0 0 5 0z" /></Svg>;
 export const IconGear = () => <Svg><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4.4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" /></Svg>;
 
+export const IconCash = () => <Svg><rect x="3" y="6" width="18" height="12" rx="2.5" /><circle cx="12" cy="12" r="2.5" /><path d="M6.5 9.5v.01M17.5 14.5v.01" /></Svg>;
+
 export function Logo() {
   return (
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden focusable="false">

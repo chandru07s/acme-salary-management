@@ -109,3 +109,15 @@ and a run). The suite is small (18 cases): a smoke test for regressions, not a b
 ## Security (deliberately out of v1, see requirements)
 Salary data is sensitive. Before real use: SSO + role-based access, audit log of reads/writes, HTTPS-only,
 and encrypted backups.
+
+
+## Auth and payroll (v6)
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Stdlib auth: scrypt password hashes + HMAC-signed expiring tokens | No extra dependency, small enough to review and test fully | No refresh tokens, rate limiting or password reset; use an identity provider for real use |
+| Roles checked by FastAPI dependencies on the server (`hr`, `owner`, `viewer`) | UI hiding is not security | Three fixed roles, no per-department scoping |
+| Maker-checker: hr prepares, owner approves, and the preparer can never approve their own run | Matches the "founder verifies before transfer" requirement | Single approval level |
+| Payslips are frozen snapshots (amounts, rates and FX stored on the row) | Approved history must not change when salaries, rates or FX change | Corrections need a new run, not an edit |
+| Pure payroll maths in `payroll.py`, workflow rules in `services/payroll.py` | Money rules are unit-testable without a database or HTTP | Rounding is per component; `special` absorbs the remainder so parts always add up |
+| PDF payslips with built-in fonts and ISO currency codes | Built-in fonts have no rupee or yen symbol; codes are unambiguous | Less pretty than symbols |

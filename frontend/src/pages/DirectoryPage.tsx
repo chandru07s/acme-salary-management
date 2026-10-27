@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { EmployeeDialog } from "../components/EmployeeDialog";
 import { IconClose, IconDownload, IconPlus, IconSearch } from "../components/Icons";
+import { can, useAuth } from "../auth";
 import { Avatar } from "../components/Avatar";
 import { PageHeader } from "../components/PageHeader";
 import { formatDate, formatMoney, formatUsdCompact } from "../format";
@@ -30,6 +31,8 @@ interface Props {
 }
 
 export function DirectoryPage({ onDataChanged }: Props) {
+  const { user } = useAuth();
+  const [exportError, setExportError] = useState<string | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [data, setData] = useState<EmployeePage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,12 +135,14 @@ export function DirectoryPage({ onDataChanged }: Props) {
         }
         actions={
           <>
-            <a className="btn btn-light-line" href={api.exportUrl(filterQuery)} download>
+            <button className="btn btn-light-line" onClick={() => api.downloadCsv(filterQuery).catch((e: Error) => setExportError(e.message))}>
               <IconDownload /> Export CSV
-            </a>
-            <button className="btn btn-primary" onClick={() => setEditing("new")}>
-              <IconPlus /> Add employee
             </button>
+            {can.editData(user.role) && (
+              <button className="btn btn-primary" onClick={() => setEditing("new")}>
+                <IconPlus /> Add employee
+              </button>
+            )}
           </>
         }
       />
@@ -173,6 +178,7 @@ export function DirectoryPage({ onDataChanged }: Props) {
         </div>
       </div>
 
+      {exportError && <div className="alert alert-danger" role="alert">{exportError}</div>}
       {error && (
         <div className="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
           <span>{error}</span>
