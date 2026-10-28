@@ -39,8 +39,4 @@ Tool used: Claude (agentic, with shell + file tools).
 - **Not verified:** the live model's accuracy. No API key was available to the AI, so only the offline guardrail run and the
   fake-model tests were executed. Run `python -m evals.run` with a key and record the result before the interview.
 
-## Candidate notes (fill in before submitting; only write what is true)
-- What I decided myself:
-- What I changed or rejected from the AI's suggestions:
-- What I checked by hand and how:
-- What I would do next:
+
